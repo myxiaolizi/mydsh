@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="我的DSH">
+  <title>我的DSH</title>
+  <defs>
+    <linearGradient id="mydsh-g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4d6bfe"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#mydsh-g)"/>
+  <!-- Four rising bars: the plugin's own "measure and improve" mark. -->
+  <g stroke="#fff" stroke-width="4.4" stroke-linecap="round" fill="none">
+    <path d="M16 44V32"/>
+    <path d="M27 44V22"/>
+    <path d="M38 44V28"/>
+    <path d="M49 44V16"/>
+  </g>
+</svg>

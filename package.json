@@ -1,0 +1,74 @@
+{
+  "name": "dsh-mydsh",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "我的DSH — one control center for DeepSeek Harness: interface tuning, usage and billing analytics, backup, retry policy, prompt, remote access, and a curated toolbox.",
+  "main": "./lib/index.js",
+  "icon": "icon.svg",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/client.js",
+    "lib/host",
+    "vendor/7z",
+    "cordis.patch.yml",
+    "locale",
+    "docs",
+    "icon.svg",
+    "README.md",
+    "LICENSE",
+    "LICENSE-7ZIP"
+  ],
+  "license": "MIT",
+  "author": "myxiaolizi",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/myxiaolizi/mydsh.git"
+  },
+  "homepage": "https://github.com/myxiaolizi/mydsh",
+  "bugs": {
+    "url": "https://github.com/myxiaolizi/mydsh/issues"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "cordis",
+    "usage",
+    "billing",
+    "backup",
+    "retry",
+    "remote-access"
+  ],
+  "engines": {
+    "dsh": ">=0.2.0-rc.2"
+  },
+  "dsh": {
+    "manifestVersion": 1,
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-settings"
+      ]
+    }
+  },
+  "scripts": {
+    "build": "node scripts/build-client.mjs",
+    "build:client": "node scripts/build-client.mjs",
+    "check": "node scripts/check-source.mjs",
+    "test": "node scripts/run-tests.mjs",
+    "verify": "node scripts/run-tests.mjs && node scripts/build-client.mjs"
+  }
+}

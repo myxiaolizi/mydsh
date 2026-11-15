@@ -1,0 +1,28 @@
+# Build output.
+#
+# `lib/` is generated from `src/` by `scripts/build-client.mjs` and by the Host's own
+# loader path, so it is rebuilt rather than reviewed. Shipping it would make every
+# source change produce a bundle diff nobody reads.
+lib/
+
+# Dependencies.
+node_modules/
+package-lock.json
+
+# Editor and OS noise.
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Local scratch.
+tmp/
+*.log
+
+# Never commit real credentials. The plugin reads them from the Host's credential store
+# at runtime, and `.env.example` is the only form that belongs in the repository.
+.env
+.env.local
+*.local.env

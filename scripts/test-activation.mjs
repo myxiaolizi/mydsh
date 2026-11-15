@@ -333,29 +333,84 @@ await check('api: the retry classifier explains a failure it is given', async ()
   assert.ok(response.json.data.backoff.length > 0);
 });
 
+// Backup and remote ship turned off, so a test that exercises their live surfaces has
+// to switch them on first — the same thing a user does in the settings page. Turning
+// them on through the settings API also proves the gate reads the stored value.
+//
+// The suite shares one DSH_HOME across checks, so every module state this test cares
+// about is set explicitly instead of being assumed.
+async function setEnabled(harness, section, enabled) {
+  const response = await callApi(harness.registered, '/mydsh/api/settings', {
+    method: 'POST',
+    body: { section, patch: { enabled } },
+  });
+  assert.equal(response.status, 200);
+  return response;
+}
+
 await check('api: backup reports config, stages, and history', async () => {
   const { apply } = await import('../lib/index.js');
   const harness = makeContext();
   await apply(harness.ctx, {});
+  await setEnabled(harness, 'backup', true);
   const response = await callApi(harness.registered, '/mydsh/api/backup');
   assert.equal(response.status, 200);
+  assert.equal(response.json.data.enabled, true);
   assert.equal(response.json.data.busy, false);
   assert.ok(Array.isArray(response.json.data.stages));
   assert.ok(Array.isArray(response.json.data.history));
+});
+
+await check('api: a disabled module refuses to act and says so', async () => {
+  const { apply } = await import('../lib/index.js');
+  const harness = makeContext();
+  await apply(harness.ctx, {});
+
+  // Force every module off, then confirm each surface reports its disabled posture
+  // instead of looking normal. Without the gate these routes answered as if healthy.
+  for (const section of ['backup', 'retry', 'remote', 'toolbox']) {
+    await setEnabled(harness, section, false);
+  }
+
+  for (const path of ['/mydsh/api/backup', '/mydsh/api/retry', '/mydsh/api/remote', '/mydsh/api/toolbox']) {
+    const response = await callApi(harness.registered, path);
+    assert.equal(response.status, 200);
+    assert.equal(response.json.data.disabled, true, `${path} should report itself disabled`);
+  }
+
+  // And an action must be refused rather than silently doing nothing, so a schedule or
+  // an external caller cannot keep writing archives behind a switched-off module.
+  const run = await callApi(harness.registered, '/mydsh/api/backup/run', { method: 'POST', body: {} });
+  assert.notEqual(run.status, 200);
+
+  // Turning a module back on restores its surface.
+  await setEnabled(harness, 'backup', true);
+  const on = await callApi(harness.registered, '/mydsh/api/backup');
+  assert.equal(on.json.data.enabled, true);
+  assert.equal(on.json.data.disabled, undefined);
 });
 
 await check('api: remote reports status and refuses to connect without a URL', async () => {
   const { apply } = await import('../lib/index.js');
   const harness = makeContext();
   await apply(harness.ctx, {});
+  await setEnabled(harness, 'remote', true);
   const status = await callApi(harness.registered, '/mydsh/api/remote');
   assert.equal(status.status, 200);
+  assert.equal(status.json.data.enabled, true);
   assert.equal(status.json.data.origin, 'http://127.0.0.1:59382');
 
   const connect = await callApi(harness.registered, '/mydsh/api/remote/connect', { method: 'POST', body: {} });
   assert.equal(connect.status, 200);
-  // The module is off by default, so a connect is a no-op with a clear state.
-  assert.equal(connect.json.data.ok, true);
+  // Without a relay URL there is nothing to dial, so the connect reports a refusal with
+  // a reason instead of pretending a tunnel is up. The earlier assertion expected
+  // success here, which contradicted both the intent and the manager's own contract.
+  assert.equal(connect.json.data.ok, false);
+  assert.equal(connect.json.data.reason, 'no-relay-url');
+
+  // The status must reflect that refusal rather than looking healthy.
+  const afterConnect = await callApi(harness.registered, '/mydsh/api/remote');
+  assert.equal(afterConnect.json.data.status.state, 'error');
 });
 
 await check('api: toolbox tolerates missing managers', async () => {

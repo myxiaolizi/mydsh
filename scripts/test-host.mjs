@@ -7,7 +7,7 @@
  * instead of in someone's editor.
  */
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile, readFile, mkdir } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile, readFile, mkdir, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -314,6 +314,44 @@ await check('retry: the ledger records outcomes and stays bounded', async () => 
   const preview = previewBackoff({ attempts: 4 });
   assert.deepEqual(preview, [1000, 2000, 4000, 8000]);
   assert.ok(previewBackoff({ attempts: 20, maxDelayMs: 30_000 }).every((delay) => delay <= 30_000));
+});
+
+await check('util: stale atomic-write temp files are swept, fresh ones survive', async () => {
+  const { sweepTempFiles } = await import('../lib/host/util.js');
+  const { utimes } = await import('node:fs/promises');
+  const dir = await mkdtemp(join(tmpdir(), 'mydsh-sweep-'));
+
+  // A file killed mid-write: old timestamp, full-size body.
+  const stale = join(dir, 'usage-index.json.123.456.tmp');
+  await writeFile(stale, 'x'.repeat(1024));
+  const old = new Date(Date.now() - 60 * 60 * 1000);
+  await utimes(stale, old, old);
+
+  // A write happening right now must never be removed.
+  const fresh = join(dir, 'usage-index.json.789.101.tmp');
+  await writeFile(fresh, 'in flight');
+
+  // An unrelated file that merely ends in .tmp should not match the prefix.
+  const unrelated = join(dir, 'other-file.tmp');
+  await writeFile(unrelated, 'keep me');
+  await utimes(unrelated, old, old);
+
+  const removed = await sweepTempFiles(dir, { prefix: 'usage-index.json' });
+  assert.equal(removed, 1, 'only the stale, prefixed temp file is removed');
+
+  const remaining = (await readdir(dir)).sort();
+  assert.deepEqual(remaining, ['other-file.tmp', 'usage-index.json.789.101.tmp']);
+
+  // The real file must be untouched by the sweep.
+  assert.equal(await readFile(fresh, 'utf8'), 'in flight');
+
+  await rm(dir, { recursive: true, force: true });
+});
+
+await check('util: a missing directory does not make the sweep throw', async () => {
+  const { sweepTempFiles } = await import('../lib/host/util.js');
+  const missing = join(tmpdir(), `mydsh-absent-${Date.now()}`, 'nested');
+  assert.equal(await sweepTempFiles(missing), 0);
 });
 
 // ── report ─────────────────────────────────────────────────────────────────

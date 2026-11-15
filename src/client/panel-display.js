@@ -215,7 +215,11 @@ function DisplayAllFields() {
   // Keys already rendered above with a richer control.
   const handled = new Set([
     'entry', 'sidebarBadge', 'brandMark', 'brandName', 'compactSidebar',
-    'sessionGrouping', 'usagePlacement',
+    'usagePlacement',
+    // `sessionGrouping` has no control above *and* must not be offered here: arranging
+    // the conversation list would mean replacing a shadows-shipped-ui slot. Without
+    // this exclusion the catch-all card would quietly render the switch again.
+    'sessionGrouping',
   ]);
 
   const rows = (sectionMeta.fields ?? []).filter((field) => !handled.has(field.key) && field.kind !== 'list');

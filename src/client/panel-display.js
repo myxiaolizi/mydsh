@@ -141,20 +141,11 @@ export function DisplayPanel() {
           onChange: (compactSidebar) => set({ compactSidebar }),
         }),
       ),
-      h(FieldRow, {
-        label: t('display.sessionGrouping'),
-        hint: t('display.sessionGroupingHint'),
-      },
-        h(Segments, {
-          value: display.sessionGrouping ?? 'workspace',
-          ariaLabel: t('display.sessionGrouping'),
-          options: [
-            { value: 'workspace', label: t('display.groupByWorkspace') },
-            { value: 'flat', label: t('display.groupFlat') },
-          ],
-          onChange: (sessionGrouping) => set({ sessionGrouping }),
-        }),
-      ),
+      // Session-list grouping is deliberately absent. Arranging the conversations under
+      // the workspace switcher means replacing `sidebar.workspaces`, which is a
+      // shadows-shipped-ui slot — taking it over would hide the shell's own list rather
+      // than extend it. The setting stays in the schema so an existing value survives,
+      // but no control is offered while it cannot do anything.
     ),
 
     h(Card, {

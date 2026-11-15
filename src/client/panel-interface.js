@@ -9,7 +9,7 @@
  * write `display.*`, so the two pages can never disagree about the current state.
  */
 import React from 'react';
-import { Card, Segments } from './ui.js';
+import { Card } from './ui.js';
 import { FieldRow, ModuleToggle, useSettings } from './settings-page.js';
 import { useT } from './i18n-react.js';
 
@@ -51,21 +51,10 @@ export function InterfacePanel() {
     }),
 
     h(Card, { title: t('iface.sidebar'), description: t('iface.sidebarHint') },
+      // Session grouping is not offered: arranging the conversation list would mean
+      // replacing a shadows-shipped-ui slot and hiding the shell's own list. See the
+      // same note in the display panel.
       TOGGLES.map((toggle) => switchRow(toggle.key, toggle.labelKey, toggle.hintKey)),
-      h(FieldRow, {
-        label: t('display.sessionGrouping'),
-        hint: t('display.sessionGroupingHint'),
-      },
-        h(Segments, {
-          value: display.sessionGrouping ?? 'workspace',
-          ariaLabel: t('display.sessionGrouping'),
-          options: [
-            { value: 'workspace', label: t('display.groupByWorkspace') },
-            { value: 'flat', label: t('display.groupFlat') },
-          ],
-          onChange: (sessionGrouping) => update('display', { sessionGrouping }),
-        }),
-      ),
     ),
 
     h(Card, { title: t('iface.account'), description: t('iface.accountHint') },

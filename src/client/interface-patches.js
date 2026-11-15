@@ -61,12 +61,17 @@ body[data-mydsh-compact='true'] [data-slot='sidebar.workspaces'] {
  *
  * Writing attributes (instead of rendering components) means the patch costs one
  * DOM write per change and nothing per frame.
+ *
+ * The values come from the `display` section, which is the single source of truth for
+ * placement and appearance. Reading `interface` instead would leave every flag stuck:
+ * the panels write `display`, so the attribute was never set no matter what the user
+ * chose.
  */
 export function applyInterfacePatches(settings) {
   const body = document.body;
   if (body === null) return;
-  const interfaceSettings = settings?.interface ?? {};
-  const on = settings?.interface?.enabled === true;
+  const display = settings?.display ?? {};
+  const on = settings?.display?.enabled === true;
 
   const flag = (name, value) => {
     const attribute = `data-mydsh-${name}`;
@@ -74,10 +79,11 @@ export function applyInterfacePatches(settings) {
     else body.removeAttribute(attribute);
   };
 
-  flag('hide-new-session', interfaceSettings.hideNewSessionButton);
-  flag('hide-brand-mark', interfaceSettings.hideBrandMark);
-  flag('hide-brand-name', interfaceSettings.hideBrandName);
-  flag('compact', interfaceSettings.compactSidebar);
+  // The brand mark and name are handled by their own slots, which return null when
+  // hidden. No CSS flag is needed for them, and emitting an unused attribute would
+  // suggest a mechanism that does not exist.
+  flag('hide-new-session', display.hideNewSessionButton);
+  flag('compact', display.compactSidebar);
 }
 
 /** Hook that applies patches whenever the settings snapshot changes. */
@@ -86,7 +92,7 @@ export function useInterfacePatches(settings) {
     applyInterfacePatches(settings);
     return () => {
       // Unloading must not leave the shell hidden.
-      for (const name of ['hide-new-session', 'hide-brand-mark', 'hide-brand-name', 'compact']) {
+      for (const name of ['hide-new-session', 'compact']) {
         document.body?.removeAttribute(`data-mydsh-${name}`);
       }
     };

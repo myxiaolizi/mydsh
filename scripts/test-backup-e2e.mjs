@@ -292,6 +292,68 @@ await check('e2e: an incomplete destination is named before the archive is built
   }
 });
 
+await check('e2e: an incomplete destination is rejected before building the archive', async () => {
+  const { home, root } = await makeHome();
+  try {
+    const { BackupEngine } = await import('../lib/host/backup/engine.js');
+    const { createSources } = await import('../lib/host/backup/sources.js');
+
+    // A missing URL must not cost a full archive: the 1.6 GB zip used to be built and then
+    // thrown away because the destination could never have accepted it.
+    const engine = new BackupEngine({
+      settings: settingsStub({
+        enabled: true,
+        items: { conversations: true },
+        destinations: [{ kind: 'webdav', url: '', directory: 'mydsh', enabled: true }],
+        archive: { format: 'zip' },
+        triggers: {},
+      }),
+      sources: createSources({ dshHome: home, profileName: 'desktop', logger: () => {} }),
+      logger: () => () => {},
+      secrets: { forDestination: async () => ({}), get: async () => undefined },
+      state: {},
+    });
+
+    const result = await engine.run({ trigger: 'manual' });
+    assert.equal(result.ok, false);
+    assert.match(result.error, /not configured yet/i);
+    const names = result.record.steps.map((step) => step.name);
+    assert.ok(names.includes('prepare'), 'the failure must be recorded');
+    assert.ok(!names.includes('archive'), 'no archive may be built for a destination that cannot take it');
+    assert.ok(!names.includes('upload'), 'and upload must not be attempted');
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+await check('e2e: a backup with no destination configured is refused', async () => {
+  const { home, root } = await makeHome();
+  try {
+    const { BackupEngine } = await import('../lib/host/backup/engine.js');
+    const { createSources } = await import('../lib/host/backup/sources.js');
+
+    const engine = new BackupEngine({
+      settings: settingsStub({
+        enabled: true,
+        items: { conversations: true },
+        destinations: [],
+        archive: { format: 'zip' },
+        triggers: {},
+      }),
+      sources: createSources({ dshHome: home, profileName: 'desktop', logger: () => {} }),
+      logger: () => () => {},
+      secrets: { forDestination: async () => ({}), get: async () => undefined },
+      state: {},
+    });
+
+    const result = await engine.run({ trigger: 'manual' });
+    assert.equal(result.ok, false);
+    assert.match(result.error, /no backup destination/i);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 await check('e2e: destination readiness is reported without running a backup', async () => {
   const { missingDestinationFields } = await import('../lib/host/backup/destinations.js');
   // The panel reads this to disable the run button instead of letting a user start an archive

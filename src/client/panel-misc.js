@@ -12,7 +12,7 @@
 import React from 'react';
 import { Badge, Card, Empty } from './ui.js';
 import { api, useAsync } from './data.js';
-import { FieldRow, useSettings } from './settings-page.js';
+import { useSettings } from './settings-page.js';
 import { useT } from './i18n-react.js';
 import { describeFailure } from './failure.js';
 
@@ -175,17 +175,6 @@ export function RemotePanel() {
             onChange: (event) => update('remote', { account: event.target.value }),
           }),
         ),
-        h(FieldRow, { label: t('remote.autoReconnect'), hint: t('remote.autoReconnectHint') },
-          h('button', {
-            type: 'button',
-            className: 'mydsh-switch',
-            'data-on': values.autoReconnect === true ? 'true' : 'false',
-            role: 'switch',
-            'aria-checked': values.autoReconnect === true,
-            'aria-label': t('remote.autoReconnect'),
-            onClick: () => update('remote', { autoReconnect: values.autoReconnect !== true }),
-          }),
-        ),
         status.data?.origin !== null && status.data?.origin !== undefined
           ? h('p', { className: 'mydsh-hint' },
             h('span', { className: 'mydsh-mono' }, status.data.origin),
@@ -234,9 +223,6 @@ export function ToolboxPanel() {
   const enabled = settings?.toolbox?.enabled === true;
   const modules = settings?.toolbox?.modules ?? {};
 
-  // The registry says, per module, whether this build can actually do anything for it. The
-  // panel has to read it before drawing a switch, or it offers toggles that nothing consumes.
-  const status = useAsync(() => api.toolbox(), []);
   const mcp = useAsync(() => api.toolboxMcp(), []);
   const plugins = useAsync(() => api.toolboxPlugins(), []);
 
@@ -249,33 +235,7 @@ export function ToolboxPanel() {
     enabled !== true
       ? h(Card, null, h(Empty, { title: t('toolbox.disabledTitle'), hint: t('settings.whereHint') }))
       : h(React.Fragment, null,
-      h(Card, { title: t('toolbox.capabilities'), description: t('toolbox.capabilitiesHint') },
-        TOOLBOX_MODULES.map((module) => {
-          // A module this build cannot implement is reported, not offered: a switch that
-          // toggles nothing is worse than an honest "not available here".
-          const entry = status.data?.registry?.[module.key];
-          const usable = entry === undefined || entry.available === true;
-          return h(FieldRow, {
-            key: module.key,
-            label: t(module.labelKey),
-            hint: usable ? t(module.hintKey) : t('toolbox.reason.' + (entry?.reason ?? 'unavailable')),
-          },
-            usable
-              ? h('button', {
-                type: 'button',
-                className: 'mydsh-switch',
-                'data-on': modules[module.key] === true ? 'true' : 'false',
-                role: 'switch',
-                'aria-checked': modules[module.key] === true,
-                'aria-label': t(module.labelKey),
-                onClick: () => toggleModule(module.key),
-              })
-              : h(Badge, { tone: 'muted' }, t('toolbox.notAvailable')),
-          );
-        }),
-      ),
-
-      h(Card, { title: t('toolbox.mcpServers'), description: t('toolbox.mcpServersHint') },
+            h(Card, { title: t('toolbox.mcpServers'), description: t('toolbox.mcpServersHint') },
         mcp.data?.available === false
           ? h(Empty, { title: t('toolbox.mcpUnavailable') })
           : (mcp.data?.servers ?? []).length === 0

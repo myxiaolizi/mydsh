@@ -15,8 +15,9 @@
  */
 import * as React from 'react';
 import { Badge, Card, Empty, Icon, cx } from './ui.js';
+import { api, useAsync } from './data.js';
 import { useT } from './i18n-react.js';
-import { FieldForm, ModuleToggle, useSettings } from './settings-page.js';
+import { FieldForm, FieldRow, ModuleToggle, useSettings } from './settings-page.js';
 
 const h = React.createElement;
 
@@ -95,6 +96,9 @@ export function SettingsPanel() {
                     descriptionKey: `${name}.description`,
                   }),
                 h(FieldForm, { section: name }),
+                // `toolbox.modules` is a `list` field, which the generated form skips because it
+                // needs a purpose-built control. It belongs here with the other switches.
+                name === 'toolbox' ? h(ToolboxModules, null) : null,
               ),
             ),
           )
@@ -105,5 +109,63 @@ export function SettingsPanel() {
     // The registry state lives here rather than on the toolbox page, because "which modules
     // exist on this build" is configuration knowledge, not a live reading.
     h('p', { className: 'mydsh-hint' }, t('settings.footerHint')),
+  );
+}
+
+/** Labels for the toolbox modules, matching the Host registry's keys. */
+const TOOLBOX_MODULES = [
+  { key: 'memory', labelKey: 'toolbox.memory', hintKey: 'toolbox.memoryHint' },
+  { key: 'pua', labelKey: 'toolbox.pua', hintKey: 'toolbox.puaHint' },
+  { key: 'imageGen', labelKey: 'toolbox.imageGen', hintKey: 'toolbox.imageGenHint' },
+  { key: 'agencyAgents', labelKey: 'toolbox.agencyAgents', hintKey: 'toolbox.agencyAgentsHint' },
+  { key: 'agentTeams', labelKey: 'toolbox.agentTeams', hintKey: 'toolbox.agentTeamsHint' },
+  { key: 'windowsMcp', labelKey: 'toolbox.windowsMcp', hintKey: 'toolbox.windowsMcpHint' },
+  { key: 'mcpConnector', labelKey: 'toolbox.mcpConnector', hintKey: 'toolbox.mcpConnectorHint' },
+  { key: 'configManager', labelKey: 'toolbox.configManager', hintKey: 'toolbox.configManagerHint' },
+  { key: 'skillExplorer', labelKey: 'toolbox.skillExplorer', hintKey: 'toolbox.skillExplorerHint' },
+];
+
+/**
+ * The toolbox module switches.
+ *
+ * `toolbox.modules` is stored as one list field, which the generated form cannot render — it
+ * needs a purpose-built control per entry. A module this build cannot implement is reported
+ * rather than offered, so the panel never presents a switch that toggles nothing.
+ */
+function ToolboxModules() {
+  const t = useT();
+  const { settings, update } = useSettings();
+  const status = useAsync(() => api.toolbox(), []);
+  const modules = settings?.toolbox?.modules ?? {};
+  const enabled = settings?.toolbox?.enabled === true;
+
+  const toggle = (key) => {
+    void update('toolbox', { modules: { ...modules, [key]: modules[key] !== true } });
+  };
+
+  if (enabled !== true) return null;
+
+  return h('div', { className: 'mydsh-stack' },
+    TOOLBOX_MODULES.map((module) => {
+      const entry = status.data?.registry?.[module.key];
+      const usable = entry === undefined || entry.available === true;
+      return h(FieldRow, {
+        key: module.key,
+        label: t(module.labelKey),
+        hint: usable ? t(module.hintKey) : t('toolbox.reason.' + (entry?.reason ?? 'unavailable')),
+      },
+        usable
+          ? h('button', {
+            type: 'button',
+            className: 'mydsh-switch',
+            'data-on': modules[module.key] === true ? 'true' : 'false',
+            role: 'switch',
+            'aria-checked': modules[module.key] === true,
+            'aria-label': t(module.labelKey),
+            onClick: () => toggle(module.key),
+          })
+          : h(Badge, { tone: 'muted' }, t('toolbox.notAvailable')),
+      );
+    }),
   );
 }

@@ -522,20 +522,6 @@ function BudgetCard() {
               ),
             ),
           ),
-        h('div', { className: 'mydsh-row' },
-          h('div', { className: 'mydsh-row-text' },
-            h('span', { className: 'mydsh-row-label' }, t('usage.enableBudgets')),
-          ),
-          h('button', {
-            type: 'button',
-            className: 'mydsh-switch',
-            'data-on': budget.enabled === true ? 'true' : 'false',
-            role: 'switch',
-            'aria-checked': budget.enabled === true,
-            'aria-label': t('usage.enableBudgets'),
-            onClick: () => update('budget', { enabled: budget.enabled !== true }),
-          }),
-        ),
       ),
   );
 }

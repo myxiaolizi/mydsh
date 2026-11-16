@@ -233,5 +233,14 @@ await check('toolbox: the switches are read, not merely stored', () => {
   assert.match(hostIndex, /registry: TOOLBOX_REGISTRY/, 'the panel needs the registry to tell truth from label');
 });
 
-console.log(`\ntoolbox: ${10 - failures}/10 passed`);
+await check('toolbox: the module switch gates the routes, not just the prompt', () => {
+  // Found on a live Host: turning `memory` off still let POST /toolbox/memory store a note.
+  // A note written past a switched-off module is never injected, so the user believes it was
+  // remembered when it was not — worse than a refusal.
+  const getRoute = hostIndex.slice(hostIndex.indexOf("router.get('/toolbox/memory'"), hostIndex.indexOf("router.get('/toolbox/plugins'"));
+  const postRoute = hostIndex.slice(hostIndex.indexOf("router.post('/toolbox/memory'"));
+  assert.match(getRoute, /modules\?\.memory !== true/, 'the read must check the module');
+  assert.match(postRoute.slice(0, 600), /modules\?\.memory !== true/, 'the write must check the module');
+});
+console.log(`\ntoolbox: ${11 - failures}/11 passed`);
 process.exit(failures === 0 ? 0 : 1);

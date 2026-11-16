@@ -24,7 +24,9 @@ stylesheet.
 dsh plugin install <path-to-this-package>
 ```
 
-`lib/` is built output and is not published, so build it once after cloning:
+`lib/client.js` is built output and is not published, so build it once after cloning.
+The rest of `lib/` — `index.js` and `host/` — is the hand-written Host half and ships
+with the package:
 
 ```powershell
 npm install

@@ -21,6 +21,7 @@
     "cordis.patch.yml",
     "locale",
     "docs",
+    "relay",
     "icon.svg",
     "README.md",
     "LICENSE",

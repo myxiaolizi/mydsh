@@ -1,0 +1,24 @@
+{
+  "name": "mydsh-relay",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "dsh-mydsh 插件的中转服务端：把内网 DeepSeek Harness 通过 WebSocket 反向隧道暴露到公网",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "start:config": "node src/server.js ./relay.config.json",
+    "check": "node --check src/server.js && node --check src/websocket.js && node --check src/tunnel.js && node --check src/auth.js && node --check src/users.js && node --check src/static.js && node --check src/util.js"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "os": [
+    "linux",
+    "darwin",
+    "win32"
+  ],
+  "license": "MIT"
+}

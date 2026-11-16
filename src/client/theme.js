@@ -1286,6 +1286,111 @@ export const STYLES = `
   color: var(--mydsh-text);
 }
 
+/* ── agent family page ────────────────────────────────────────────────────
+   Same floating layer as the insight page, so it reuses that backdrop and page
+   shell and only adds the tree itself. Depth is shown with a left inset rather
+   than drawn connector lines: an indent survives narrow widths and wrapping
+   labels, where SVG connectors would need re-measuring on every resize. */
+.${ROOT}-fleet-entry {
+  gap: 6px;
+}
+
+.${ROOT}-fleet-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.${ROOT}-fleet-member {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--mydsh-border);
+  background: var(--mydsh-surface);
+  /* Indent per level, capped at 6 so a deep tree stays readable. */
+  margin-left: calc(min(var(--fleet-depth, 0), 6) * 14px);
+}
+
+.${ROOT}-fleet-member[data-depth="1"] { --fleet-depth: 1; }
+.${ROOT}-fleet-member[data-depth="2"] { --fleet-depth: 2; }
+.${ROOT}-fleet-member[data-depth="3"] { --fleet-depth: 3; }
+.${ROOT}-fleet-member[data-depth="4"] { --fleet-depth: 4; }
+.${ROOT}-fleet-member[data-depth="5"] { --fleet-depth: 5; }
+.${ROOT}-fleet-member[data-depth="6"] { --fleet-depth: 6; }
+
+.${ROOT}-fleet-member[data-state="running"] {
+  border-color: color-mix(in srgb, var(--mydsh-accent) 42%, var(--mydsh-border));
+  background: var(--mydsh-accent-soft);
+}
+
+.${ROOT}-fleet-member[data-state="diagnostic"] {
+  border-color: color-mix(in srgb, var(--mydsh-warn) 45%, var(--mydsh-border));
+  background: var(--mydsh-warn-soft);
+}
+
+.${ROOT}-fleet-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.${ROOT}-fleet-dot {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--mydsh-text-muted);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mydsh-text-muted) 18%, transparent);
+}
+
+.${ROOT}-fleet-dot[data-running="yes"] {
+  background: var(--mydsh-success);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mydsh-success) 22%, transparent);
+  animation: mydsh-fleet-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes mydsh-fleet-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+.${ROOT}-fleet-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--mydsh-font-sm);
+  font-weight: 600;
+  color: var(--mydsh-text);
+}
+
+.${ROOT}-fleet-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mydsh-space-3);
+  padding-left: 15px;
+  font-size: var(--mydsh-font-xs);
+  color: var(--mydsh-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.${ROOT}-fleet-meta span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 42ch;
+}
+
+.${ROOT}-fleet-loading {
+  padding: 22px 0;
+  text-align: center;
+  font-size: var(--mydsh-font-sm);
+  color: var(--mydsh-text-muted);
+}
+
 /* Reduced motion: the plugin animates state changes, so honour the preference. */
 @media (prefers-reduced-motion: reduce) {
   .${ROOT} * {

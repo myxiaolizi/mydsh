@@ -65,3 +65,24 @@ export function useValue(store) {
  */
 export const insightOpen = createStore(false);
 
+/**
+ * The agent-family page: whether it is open and which session it belongs to.
+ *
+ * The session is part of the state because a family has no meaning without one; the
+ * opener knows which session it was invoked from and the page lives in a different slot.
+ * `sessionId` is kept after closing so reopening from the same session does not flash an
+ * empty page while the read is in flight.
+ */
+export const fleetState = createStore({ open: false, sessionId: '' });
+
+/** Open the family page for one session; an empty id asks the Host for the latest one. */
+export function openFleet(sessionId) {
+  const id = typeof sessionId === 'string' ? sessionId : '';
+  fleetState.set({ open: true, sessionId: id });
+}
+
+/** Close it, keeping the last session so a reopen reuses it immediately. */
+export function closeFleet() {
+  fleetState.set((current) => ({ ...current, open: false }));
+}
+

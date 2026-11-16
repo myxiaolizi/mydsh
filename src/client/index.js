@@ -38,6 +38,7 @@ import { SettingsPage, SettingsProvider, useSettings } from './settings-page.js'
 import { I18nProvider, useT } from './i18n-react.js';
 import { api } from './data.js';
 import { formatNumber } from './format.js';
+import { Icon } from './ui.js';
 import { DisplayPanel } from './panel-display.js';
 import { UsagePanel } from './panel-usage.js';
 import { BackupPanel } from './panel-backup.js';
@@ -45,7 +46,8 @@ import { RetryPanel } from './panel-retry.js';
 import { InterfacePanel } from './panel-interface.js';
 import { PromptPanel, RemotePanel, ToolboxPanel } from './panel-misc.js';
 import { InsightPage } from './panel-insight.js';
-import { insightOpen, useValue } from './store.js';
+import { FleetPage } from './panel-fleet.js';
+import { insightOpen, fleetState, openFleet, closeFleet, useValue } from './store.js';
 
 const h = React.createElement;
 
@@ -58,6 +60,9 @@ const IDS = {
   entry: 'mydsh-entry',
   entryIcon: 'mydsh-entry-icon',
   insight: 'mydsh-insight',
+  fleet: 'mydsh-fleet',
+  fleetEntry: 'mydsh-fleet-entry',
+  fleetSidebar: 'mydsh-fleet-sidebar',
 };
 
 /** Which settings section panel renders for each tab. */
@@ -97,6 +102,22 @@ function InsightOverlay() {
 
   if (!open) return null;
   return h(InsightPage, { onClose: () => insightOpen.set(false) });
+}
+
+/**
+ * The agent-family page, in the same floating layer as the insight page.
+ *
+ * It is a second overlay rather than a second tab of the first because the two answer
+ * different questions and are opened from different places: insight from the usage panel,
+ * family from a session's own header.
+ *
+ * The family's Escape handler lives in the page itself, which is why this wrapper does not
+ * duplicate it; only the visibility check belongs here.
+ */
+function FleetOverlay() {
+  const state = useValue(fleetState);
+  if (!state.open) return null;
+  return h(FleetPage, { sessionId: state.sessionId, onClose: closeFleet });
 }
 
 /**
@@ -207,6 +228,63 @@ function useTodayTokens(enabled) {
   }, [enabled]);
 
   return total;
+}
+
+/**
+ * The way into the agent-family page.
+ *
+ * It lives in `conversation.session.header.actions`, which is a `list` slot with
+ * `replaceRisk: none` scoped to one session — so it appears only where a family exists,
+ * and it arrives with the `sessionId` the page needs.
+ *
+ * A control with no session renders nothing rather than an inert button: a family page
+ * with no subject has nothing to show.
+ */
+function FleetEntry({ sessionId }) {
+  const t = useT();
+  const { settings } = useSettings();
+  // Placement is a display setting, so the entry follows it: header (the only seat that
+  // hands over a session id), the sidebar foot, or nowhere.
+  const placement = settings?.display?.fleetPlacement ?? 'header';
+  if (placement !== 'header') return null;
+  if (settings?.display?.enabled === false) return null;
+  if (typeof sessionId !== 'string' || sessionId === '') return null;
+  return h('button', {
+    type: 'button',
+    className: 'mydsh-btn mydsh-btn-ghost mydsh-fleet-entry',
+    title: t('fleet.entryHint'),
+    'aria-label': t('fleet.open'),
+    onClick: () => openFleet(sessionId),
+  },
+    h(Icon, { name: 'layers', size: 15 }),
+    h('span', null, t('fleet.open')),
+  );
+}
+
+/**
+ * The agent-family entry when it is placed at the sidebar foot.
+ *
+ * This seat carries no session id, so it asks the Host for the most recently active live
+ * agent: a family always belongs to some session, and the entry point is not scoped to
+ * one. That is why `header` is the default placement and this is the alternative.
+ */
+function SidebarFleetEntry({ wide }) {
+  const { settings } = useSettings();
+  const t = useT();
+  const display = settings?.display ?? {};
+  if (display.fleetPlacement !== 'sidebar' || display.enabled === false) return null;
+
+  const label = t('fleet.open');
+  return h('button', {
+    type: 'button',
+    className: 'mydsh-btn mydsh-btn-ghost mydsh-fleet-entry',
+    title: t('fleet.entryHint'),
+    'aria-label': label,
+    onClick: () => openFleet(''),
+  },
+    h(Icon, { name: 'layers', size: 15 }),
+    wide === false ? null : h('span', null, label),
+  );
 }
 
 /**
@@ -361,6 +439,16 @@ export function apply(ctx) {
     }, (props) => h(Providers, { ctx }, h(SidebarEntry, { ctx, wide: props?.wide }))),
   );
 
+  // The agent-family entry when the user places it at the sidebar foot. It shares the
+  // seat with the plugin entry, ordered after it so Settings stays first.
+  guard('sidebar.footer.action', () =>
+    mount(ctx, 'sidebar.footer.action', {
+      name: 'sidebar.footer.action',
+      id: IDS.fleetSidebar,
+      order: 20,
+    }, (props) => h(Providers, { ctx }, h(SidebarFleetEntry, { wide: props?.wide }))),
+  );
+
   // Brand replacements, each gated inside its own component.
   guard('sidebar.brand.mark', () =>
     mount(ctx, 'sidebar.brand.mark', {
@@ -400,6 +488,28 @@ export function apply(ctx) {
     }, () => h(Providers, { ctx }, h(InsightOverlay, null))),
   );
 
+  // The agent-family page shares the floating layer, ordered after the insight page so
+  // that opening one and then the other leaves the newer arrival on top.
+  guard('shell.overlay', () =>
+    mount(ctx, 'shell.overlay', {
+      name: 'shell.overlay',
+      id: IDS.fleet,
+      order: 50,
+    }, () => h(Providers, { ctx }, h(FleetOverlay, null))),
+  );
+
+  // The way in: one control in the session header, beside the title. This slot is
+  // session-scoped and hands its occupants `sessionId`, which is exactly what a family
+  // needs — the Host has no notion of "the current session", so the opener must supply it.
+  guard('conversation.session.header.actions', () =>
+    mount(ctx, 'conversation.session.header.actions', {
+      name: 'conversation.session.header.actions',
+      id: IDS.fleetEntry,
+      order: 20,
+      label: () => textFor(ctx, 'fleet.open', '代理家族'),
+    }, (props) => h(Providers, { ctx }, h(FleetEntry, { sessionId: props?.sessionId }))),
+  );
+
   return () => {
     for (const dispose of disposers.reverse()) {
       try {
@@ -412,22 +522,37 @@ export function apply(ctx) {
 }
 
 /**
- * The localized nav label.
+ * Read one dictionary entry through the app's own locale service.
  *
  * The slot contract allows `label` to be a thunk, which the shell re-reads on every
- * projection — so reading the translator here makes the tab follow the app's
- * language without re-registering the slot.
+ * projection — so resolving the text here makes the seat follow the app's language
+ * without re-registering the slot. `fallback` covers the window before the locale
+ * service is reachable, which is also what a missing key would otherwise print.
  */
-function navLabel(ctx) {
+function textFor(ctx, key, fallback) {
   try {
     const bound = ctx?.get?.('locale')?.bind?.('mydsh');
-    const text = bound?.('nav.title');
-    if (typeof text === 'string' && text !== 'nav.title') return text;
-    const active = ctx?.get?.('locale')?.getLocale?.()?.active;
-    return active === 'zh' ? '我的DSH' : 'My DSH';
+    const text = bound?.(key);
+    if (typeof text === 'string' && text !== key) return text;
   } catch {
-    return '我的DSH';
+    // A locale service that throws must not cost the caller its label.
   }
+  return fallback;
+}
+
+/**
+ * The localized nav label.
+ */
+function navLabel(ctx) {
+  const active = (() => {
+    try {
+      return ctx?.get?.('locale')?.getLocale?.()?.active;
+    } catch {
+      return undefined;
+    }
+  })();
+  const fallback = active === 'zh' ? '我的DSH' : 'My DSH';
+  return textFor(ctx, 'nav.title', fallback);
 }
 
 /** Exported for tests and diagnostics. */

@@ -145,6 +145,12 @@ export const api = {
   usageBalance: () => read('/usage/balance', { ttlMs: 30_000 }),
   usagePrices: () => read('/usage/prices', { ttlMs: 60_000 }),
 
+  // The agent family changes as children start and finish, so this is never cached.
+  agentsTree: (sessionId) => read('/agents/tree', {
+    query: `sessionId=${encodeURIComponent(sessionId)}`,
+    ttlMs: 0,
+  }),
+
   backup: () => read('/backup', { ttlMs: 0 }),
   backupRun: () => write('/backup/run', {}),
   backupTestDestination: (destination) => write('/backup/test-destination', { destination }),

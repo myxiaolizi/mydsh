@@ -142,9 +142,9 @@ function SidebarUsageReadout({ wide }) {
   // read nowhere, so choosing a position changed nothing. `sidebar` is the default seat; the
   // other three are handled by their own hosts (the titlebar chip and the main panel), and
   // `off` hides the readout entirely.
-  if (display.usagePlacement === 'off') return null;
-  if (display.usagePlacement === 'titlebar') return null;
-  if (display.usagePlacement !== 'sidebar' && display.usagePlacement !== 'panel') return null;
+  // Only `sidebar` puts the numbers in the foot row. `panel` keeps them inside the plugin's
+  // own panel, `titlebar` puts them in the header, and `off` hides them everywhere.
+  if (display.usagePlacement !== 'sidebar') return null;
 
   const show = display.sidebarBadge === true;
   const today = useTodayTokens(show);
@@ -475,7 +475,12 @@ function TitlebarEntry({ ctx }) {
   const { settings } = useSettings();
   const display = settings?.display ?? {};
   if (display.entry !== 'titlebar') return null;
-  return h(PluginEntryButton, { wide: false, today: undefined, showBadge: false, compact: true });
+  // Two independent switches meet here: `entry` decides whether the plugin's button sits in
+  // the header, `usagePlacement` decides whether the figures ride along with it. Showing the
+  // numbers needed both, which is why the button carried no readout before.
+  const showUsage = display.usagePlacement === 'titlebar';
+  const today = useTodayTokens(showUsage);
+  return h(PluginEntryButton, { wide: false, today, showBadge: showUsage, compact: showUsage !== true });
 }
 
 /**

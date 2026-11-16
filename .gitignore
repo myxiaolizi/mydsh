@@ -7,7 +7,9 @@ lib/
 
 # Dependencies.
 node_modules/
-package-lock.json
+# `package-lock.json` is committed on purpose. It pins the one build dependency
+# (esbuild), and the lockfile was ignored while the dependency was undeclared, so a
+# fresh clone ran `npm install` and got nothing, then failed to build.
 
 # Editor and OS noise.
 .vscode/

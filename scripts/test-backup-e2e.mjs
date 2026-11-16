@@ -193,6 +193,16 @@ await check('e2e: incremental mode skips when nothing changed', async () => {
     assert.equal(second.skipped, true, 'a second run with no changes must skip');
     assert.equal(second.reason, 'no-changes');
 
+    // Repeat it. A single skip passed even while the behaviour was broken, because the
+    // old comparison used the wall-clock start of the run: a file written in the same
+    // millisecond as the start compared as "changed" and the run archived everything.
+    // That made the failure intermittent, so one skip proves nothing — several in a row
+    // do, because a same-millisecond write lands in one of them.
+    for (let round = 0; round < 5; round += 1) {
+      const repeat = await makeEngine().run({ trigger: 'manual' });
+      assert.equal(repeat.skipped, true, `round ${round + 2} of no changes must also skip`);
+    }
+
     // Touching a file must make the next run produce work again.
     const touched = join(home, 'workspaces', 'demo', 'README.md');
     const future = new Date(Date.now() + 60_000);
@@ -200,6 +210,11 @@ await check('e2e: incremental mode skips when nothing changed', async () => {
     const third = await makeEngine().run({ trigger: 'manual' });
     assert.equal(third.ok, true, `third run failed: ${third.error ?? ''}`);
     assert.notEqual(third.skipped, true, 'a changed file must produce an archive');
+
+    // And having archived the change, it goes back to skipping rather than archiving
+    // the same file forever.
+    const settled = await makeEngine().run({ trigger: 'manual' });
+    assert.equal(settled.skipped, true, 'after the change is archived, runs skip again');
   } finally {
     await rm(root, { recursive: true, force: true });
   }

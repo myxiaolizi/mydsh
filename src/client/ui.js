@@ -405,6 +405,48 @@ export function Icon({ name, size = 16 }) {
   }, h('path', { d: path }));
 }
 
+/**
+ * A sparkline: a single line with a soft fill, for showing a trend in a small space.
+ *
+ * Distinct from `AreaChart` on purpose. That one draws stacked series with an axis and a
+ * hover column, which is the right weight for the main usage chart. This one is for a
+ * figure that has a number beside it already — the line only has to show direction.
+ *
+ * `values` is a plain number array in chronological order.
+ */
+export function Sparkline({ values, height = 36, tone = 'accent', label }) {
+  const width = 240;
+  const valuesSafe = values ?? [];
+  const points = useMemo(() => {
+    // A trend needs at least two samples. One value would draw a degenerate sliver that
+    // looks like a rendering bug, so the component declines instead of asking every
+    // caller to remember the guard.
+    if (valuesSafe.length < 2) return null;
+    const max = Math.max(...valuesSafe);
+    const min = Math.min(...valuesSafe);
+    // A flat series would divide by zero; draw it down the middle instead.
+    const span = max - min || 1;
+    const stepX = width / (valuesSafe.length - 1);
+    return valuesSafe.map((value, index) => {
+      const x = index * stepX;
+      const y = height - ((value - min) / span) * (height - 4) - 2;
+      return [x, y];
+    });
+  }, [valuesSafe, height]);
+
+  if (points === null) return null;
+
+  const line = points.map(([x, y], index) => `${index === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
+  const area = `${line} L${width} ${height} L0 ${height} Z`;
+
+  return h('div', { className: 'mydsh-spark', 'data-tone': tone, role: 'img', 'aria-label': label ?? '' },
+    h('svg', { viewBox: `0 0 ${width} ${height}`, preserveAspectRatio: 'none', 'aria-hidden': true },
+      h('path', { d: area, className: 'mydsh-spark-area' }),
+      h('path', { d: line, className: 'mydsh-spark-line', fill: 'none' }),
+    ),
+  );
+}
+
 /** A small dismissible error banner. */
 export function ErrorBanner({ message, onDismiss, dismissLabel = 'Dismiss' }) {
   if (message === undefined || message === null || message === '') return null;
@@ -413,5 +455,76 @@ export function ErrorBanner({ message, onDismiss, dismissLabel = 'Dismiss' }) {
     onDismiss !== undefined
       ? h('button', { type: 'button', className: 'mydsh-btn mydsh-btn-sm mydsh-btn-ghost', onClick: onDismiss }, dismissLabel)
       : null,
+  );
+}
+
+/**
+ * A calendar heatmap of daily activity.
+ *
+ * Each cell is one day, coloured by how much was spent that day relative to the busiest
+ * day in view. Weeks run in columns so the shape reads like a calendar without needing
+ * month labels, and a day with no data is drawn as an empty well rather than the lowest
+ * colour, so "nothing happened" stays distinguishable from "a little happened".
+ *
+ * `days` is `[{ start, value, calls }]` in chronological order. `formatValue` and
+ * `formatDay` keep the wording in the active language.
+ */
+export function Heatmap({ days, formatValue, formatDay, label, weeks = undefined }) {
+  const [hover, setHover] = useState(undefined);
+
+  // Group into weeks of seven, starting on the weekday of the first day.
+  const columns = useMemo(() => {
+    if (days.length === 0) return [];
+    const first = new Date(days[0].start);
+    // Monday-first: 0 = Monday … 6 = Sunday.
+    const lead = (first.getDay() + 6) % 7;
+    const cells = [...Array(lead).fill(null), ...days];
+    const built = [];
+    for (let index = 0; index < cells.length; index += 7) {
+      built.push(cells.slice(index, index + 7));
+    }
+    return weeks === undefined ? built : built.slice(-weeks);
+  }, [days, weeks]);
+
+  const peak = useMemo(() => Math.max(1, ...days.map((day) => day.value ?? 0)), [days]);
+
+  if (days.length === 0) return null;
+
+  const level = (value) => {
+    if (value === undefined || value === null || value === 0) return 0;
+    const ratio = value / peak;
+    if (ratio > 0.66) return 4;
+    if (ratio > 0.33) return 3;
+    if (ratio > 0.1) return 2;
+    return 1;
+  };
+
+  return h('div', { className: 'mydsh-heatmap-wrap' },
+    // The graphic itself carries the accessible name. Naming it after the last day would
+    // announce a date instead of what the picture is, and the per-cell titles already
+    // carry the dates.
+    h('div', { className: 'mydsh-heatmap', role: 'img', 'aria-label': label ?? '' },
+      columns.map((week, columnIndex) =>
+        h('div', { key: columnIndex, className: 'mydsh-heatmap-week' },
+          week.map((day, rowIndex) => {
+            if (day === null) return h('div', { key: rowIndex, className: 'mydsh-heatmap-cell', 'data-level': 'empty' });
+            const isHovered = hover !== undefined && hover.start === day.start;
+            return h('div', {
+              key: day.start,
+              className: 'mydsh-heatmap-cell',
+              'data-level': String(level(day.value)),
+              'data-hover': isHovered ? 'true' : undefined,
+              onMouseEnter: () => setHover(day),
+              onMouseLeave: () => setHover(undefined),
+              title: `${formatDay?.(day.start) ?? ''} · ${formatValue?.(day.value ?? 0) ?? day.value ?? 0}`,
+            });
+          }),
+        ),
+      ),
+    ),
+    hover === undefined ? null : h('div', { className: 'mydsh-heatmap-readout' },
+      h('span', null, formatDay?.(hover.start) ?? ''),
+      h('span', { className: 'mydsh-mono' }, formatValue?.(hover.value ?? 0) ?? String(hover.value ?? 0)),
+    ),
   );
 }

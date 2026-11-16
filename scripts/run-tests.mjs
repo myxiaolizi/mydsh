@@ -19,6 +19,7 @@ const SUITES = [
   { name: 'usage stress', script: 'test-usage-stress.mjs' },
   { name: 'activation', script: 'test-activation.mjs' },
   { name: 'client bundle', script: 'test-client.mjs' },
+  { name: 'heatmap', script: 'test-heatmap.mjs' },
   { name: 'tunnel protocol', script: 'test-tunnel.mjs' },
   { name: '7z', script: 'test-7z.mjs' },
   { name: 'backup e2e', script: 'test-backup-e2e.mjs' },

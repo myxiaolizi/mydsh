@@ -16,8 +16,10 @@ import {
   Badge,
   Card,
   Empty,
+  Heatmap,
   Meter,
   Segments,
+  Sparkline,
   Stat,
   cx,
   formatBytes,
@@ -27,7 +29,7 @@ import {
 } from './ui.js';
 import { api, useAsync } from './data.js';
 import { ModuleToggle, FieldForm, useSettings } from './settings-page.js';
-import { useT, useFailureText } from './i18n-react.js';
+import { useT, useLocale, useFailureText } from './i18n-react.js';
 
 const h = React.createElement;
 
@@ -84,6 +86,9 @@ const PERIODS = [
 export function UsagePanel() {
   const { settings } = useSettings();
   const t = usePanelT();
+  // Day labels follow the harness language rather than the OS locale, so a user who
+  // runs DSH in Chinese does not get English month names from the date formatter.
+  const locale = useLocale();
   const enabled = settings?.usage?.enabled === true;
   const [range, setRange] = React.useState('7d');
   const [dimension, setDimension] = React.useState('provider');
@@ -91,6 +96,17 @@ export function UsagePanel() {
   const usage = useAsync(
     ({ signal }) => api.usage({ range, groupBy: dimension, signal }),
     [range, dimension],
+    { immediate: enabled },
+  );
+
+  // The heatmap keeps its own window. It answers "which days did I work", which only
+  // means anything over months; deriving it from the range selector made a 7-day choice
+  // render one thin column in a wide card. Three months is the usual calendar view, and
+  // `bucket: 'day'` asks for one cell per day: the automatic scaling would fold a quarter
+  // into weekly buckets and the calendar would show thirteen cells instead of ninety.
+  const activity = useAsync(
+    ({ signal }) => api.usage({ range: '90d', bucket: 'day', signal }),
+    [],
     { immediate: enabled },
   );
 
@@ -143,6 +159,27 @@ export function UsagePanel() {
                   series,
                 }),
               ),
+      ),
+
+      // A calendar view of the same window. The area chart answers "how much, when";
+      // this answers "which days did I actually work" at a glance, which the stacked
+      // chart cannot show once the window is a month or more.
+      usage.data?.disabled === true ? null : h(Card, {
+        title: t('usage.activity'),
+        description: t('usage.activityHint'),
+      },
+        activity.loading && activity.data === undefined ? h(Loading, null)
+          : activity.data?.disabled === true ? h(Empty, { title: t('usage.trackingOff') })
+            : h(Heatmap, {
+              label: t('usage.activity'),
+              days: (activity.data?.buckets ?? []).map((bucket) => ({
+                start: bucket.start,
+                value: bucket.total,
+                calls: bucket.calls,
+              })),
+              formatValue: (value) => t('usage.activityValue', { count: formatNumber(value) }),
+              formatDay: (start) => new Date(start).toLocaleDateString(locale === 'zh' ? 'zh-CN' : 'en-US'),
+            }),
       ),
 
       h('div', { className: 'mydsh-grid mydsh-grid-wide' },
@@ -233,6 +270,20 @@ function ContextCard() {
             }, `${Math.round(data.ratio * 100)}%`),
           ),
           data.ratio === null ? null : h(Meter, { ratio: data.ratio }),
+          // The growth curve. One number says how full the window is; the curve says
+          // whether it is filling up or has already been compacted back down, which is
+          // what explains a sudden slowdown in a long session.
+          (data.points ?? []).length < 2 ? null : h(React.Fragment, null,
+            h(Sparkline, {
+              values: (data.points ?? []).map((point) => point.prompt),
+              tone: data.ratio === null ? 'accent' : data.ratio >= 0.9 ? 'danger' : data.ratio >= 0.7 ? 'warn' : 'accent',
+              label: t('usage.contextTrend'),
+            }),
+            h('div', { className: 'mydsh-inline', style: { justifyContent: 'space-between', fontSize: 'var(--mydsh-font-xs)', color: 'var(--mydsh-text-muted)' } },
+              h('span', null, t('usage.contextTrendTurns', { count: formatNumber((data.points ?? []).length) })),
+              h('span', null, t('usage.contextPeak', { count: formatNumber(data.peakPrompt ?? 0) })),
+            ),
+          ),
           h('p', { className: 'mydsh-hint' },
             data.lastTime > 0
               ? t('usage.lastRequestAt', { when: formatRelative(data.lastTime) })

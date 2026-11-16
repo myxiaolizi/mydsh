@@ -78,6 +78,36 @@ await check('usage: an empty corpus yields a valid empty aggregate', async () =>
   }
 });
 
+await check('usage: a bucket override gives the heatmap one cell per day', async () => {
+  // The calendar view needs a cell per day whatever the span. Without the override the
+  // automatic scaling folds a quarter into weekly buckets, so the heatmap silently
+  // rendered thirteen columns instead of ninety and looked sparse rather than wrong.
+  const day = 86_400_000;
+  const week = 7 * day;
+
+  // Presets run from midnight of the first day to *now*, so the span is a whole number
+  // of days plus the part of today already elapsed.
+  const automatic = resolveRange({ kind: '90d' });
+  assert.equal(automatic.bucketMs, week, 'a quarter scales to weekly buckets by default');
+
+  const daily = resolveRange({ kind: '90d', bucket: 'day' });
+  assert.equal(daily.bucketMs, day, 'an explicit day bucket must win over the scaling rule');
+
+  const { bucketize } = await import('../lib/host/usage/store.js');
+  const cells = bucketize(daily.from, daily.to, daily.bucketMs);
+  assert.ok(cells.length >= 89 && cells.length <= 91, `expected about 90 cells, got ${cells.length}`);
+
+  // Every full cell is one day wide; the last may be clipped to "now".
+  for (const cell of cells.slice(0, -1)) {
+    assert.equal(cell.end - cell.start, day);
+  }
+
+  // An unknown bucket name must fall back to the automatic choice, not to zero.
+  assert.equal(resolveRange({ kind: '90d', bucket: 'fortnight' }).bucketMs, week);
+  // Hourly stays available for short windows.
+  assert.equal(resolveRange({ kind: 'today', bucket: 'hour' }).bucketMs, 3_600_000);
+});
+
 await check('usage: the first refresh reads every session exactly once', async () => {
   const { root, home } = await makeHome([1, 2, 3]);
   try {

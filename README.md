@@ -7,7 +7,7 @@ each surface can be placed where you want it — or turned off entirely.
 | --- | --- |
 | **Placement** | Where the entry appears (sidebar, settings only, titlebar, hidden), which modules are enabled, today's token count beside the sidebar entry, and where the usage surface lives. |
 | **Interface** | Hide the new-session button, sidebar logo, or product name. Compact sidebar spacing. Move the account menu into the titlebar as an avatar-only chip. |
-| **Usage** | Token totals and estimated cost by provider, model, session, and workspace. Stacked trend chart. Context-window pressure. DeepSeek account balance. Per-scope budgets that notify or pause work. |
+| **Usage** | Token totals and estimated cost by provider, model, session, and workspace. Stacked trend chart, a 90-day activity heatmap, and a context-growth curve. Context-window pressure. DeepSeek account balance. Per-scope budgets that notify or pause work. |
 | **Backup** | Back up workspaces, conversations, configuration, plugins, and model/provider metadata to a local folder, WebDAV, or Aliyun OSS. ZIP or 7z (bundled). Incremental runs, password encryption, splitting, retention. Triggers: manual, cron, after each session, or on startup. |
 | **Retry** | Per-error-kind policies with exponential backoff and jitter, plus optional model or provider switching when a request keeps failing. |
 | **Prompt** | Standing instructions prepended or appended to the system prompt. |
@@ -63,9 +63,15 @@ working behind a switched-off module.
 a step log, so a failure names the stage you can act on.
 
 **Incremental means "only what changed", not "a different archive".** Each archive
-is self-contained, so restoring needs only the newest one. Timestamps are compared in
-whole milliseconds; a finer comparison treated files written moments before a run as
-newer than the run itself and archived everything every time.
+is self-contained, so restoring needs only the newest one. The watermark is the newest
+file timestamp a run actually observed, not the moment the run started: comparing file
+times against a wall-clock start made a file written in the same millisecond as the start
+look newer than the run, so runs alternated between skipping and re-archiving everything.
+
+**The heatmap keeps its own 90-day window.** It answers "which days did I actually work",
+which only means something over months, so it does not follow the range selector. It asks
+for one cell per day explicitly: the chart's automatic bucket scaling would fold a quarter
+into weekly cells and the calendar would show thirteen squares instead of ninety.
 
 **Retention runs after a successful upload.** A failed upload never deletes the
 last good copy.

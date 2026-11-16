@@ -572,6 +572,112 @@ export const STYLES = `
   display: inline-block;
 }
 
+/* ── activity heatmap ─────────────────────────────────────────────────────
+   Five steps from "nothing" to "busiest", all mixed from the accent colour so
+   the ramp follows the theme instead of hard-coding a green. Level 0 is a well,
+   not the palest tint, so an idle day never looks like a quiet one. */
+.${ROOT}-heatmap-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mydsh-space-3);
+}
+
+.${ROOT}-heatmap {
+  display: flex;
+  gap: 3px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.${ROOT}-heatmap-week {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.${ROOT}-heatmap-cell {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--mydsh-surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--mydsh-border);
+  transition: transform 90ms ease, box-shadow 90ms ease;
+}
+
+.${ROOT}-heatmap-cell[data-level='1'] {
+  background: color-mix(in srgb, var(--mydsh-accent) 18%, var(--mydsh-surface-sunken));
+}
+
+.${ROOT}-heatmap-cell[data-level='2'] {
+  background: color-mix(in srgb, var(--mydsh-accent) 36%, var(--mydsh-surface-sunken));
+}
+
+.${ROOT}-heatmap-cell[data-level='3'] {
+  background: color-mix(in srgb, var(--mydsh-accent) 58%, var(--mydsh-surface-sunken));
+}
+
+.${ROOT}-heatmap-cell[data-level='4'] {
+  background: color-mix(in srgb, var(--mydsh-accent) 82%, var(--mydsh-surface-sunken));
+}
+
+.${ROOT}-heatmap-cell[data-level='empty'] {
+  background: transparent;
+  box-shadow: none;
+}
+
+.${ROOT}-heatmap-cell[data-hover='true'] {
+  transform: scale(1.25);
+  box-shadow: 0 0 0 1px var(--mydsh-accent);
+}
+
+.${ROOT}-heatmap-readout {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--mydsh-space-3);
+  font-size: var(--mydsh-font-xs);
+  color: var(--mydsh-text-muted);
+  min-height: 1.4em;
+}
+
+/* ── sparkline ────────────────────────────────────────────────────────────
+   A line plus a faint fill. The stroke uses the accent colour by default and
+   switches to the warning and danger tones as the ratio climbs, so the same
+   component reads as "fine" or "nearly full" without a separate variant. */
+.${ROOT}-spark svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.${ROOT}-spark-line {
+  stroke: var(--mydsh-accent);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.${ROOT}-spark-area {
+  fill: color-mix(in srgb, var(--mydsh-accent) 16%, transparent);
+}
+
+.${ROOT}-spark[data-tone='warn'] .${ROOT}-spark-line {
+  stroke: var(--mydsh-warn);
+}
+
+.${ROOT}-spark[data-tone='warn'] .${ROOT}-spark-area {
+  fill: color-mix(in srgb, var(--mydsh-warn) 16%, transparent);
+}
+
+.${ROOT}-spark[data-tone='danger'] .${ROOT}-spark-line {
+  stroke: var(--mydsh-danger);
+}
+
+.${ROOT}-spark[data-tone='danger'] .${ROOT}-spark-area {
+  fill: color-mix(in srgb, var(--mydsh-danger) 16%, transparent);
+}
+
 .${ROOT}-tooltip {
   position: absolute;
   pointer-events: none;

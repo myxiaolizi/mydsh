@@ -26,6 +26,7 @@ const SUITES = [
   { name: 'client bundle', script: 'test-client.mjs' },
   { name: 'heatmap', script: 'test-heatmap.mjs' },
   { name: 'tunnel protocol', script: 'test-tunnel.mjs' },
+  { name: 'auto-continue', script: 'test-auto-continue.mjs' },
   { name: '7z', script: 'test-7z.mjs' },
   { name: 'backup e2e', script: 'test-backup-e2e.mjs' },
 ];

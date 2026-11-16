@@ -190,6 +190,40 @@ export function RetryPanel() {
 
       h(ClassifierCard, null),
 
+      // Whole-turn continuation is a separate layer from the stream retry above: this shows
+      // what is queued right now and why each session last stopped, which is the only way to
+      // tell "nothing to do" apart from "it gave up".
+      h(Card, { title: t('retry.continuation'), description: t('retry.continuationHint') },
+        (status.data?.continuation?.sessions ?? []).length === 0
+          ? h(Empty, { title: t('retry.noContinuation'), hint: t('retry.noContinuationHint') })
+          : h('div', { className: 'mydsh-table-wrap' },
+            h('table', { className: 'mydsh-table' },
+              h('thead', null,
+                h('tr', null,
+                  h('th', null, t('retry.session')),
+                  h('th', null, t('retry.lastStop')),
+                  h('th', { className: 'num' }, t('retry.attempt')),
+                  h('th', null, t('retry.pending')),
+                ),
+              ),
+              h('tbody', null,
+                status.data.continuation.sessions.map((entry) =>
+                  h('tr', { key: entry.sessionId },
+                    h('td', { className: 'mydsh-mono' }, String(entry.sessionId).slice(0, 12) + '…'),
+                    h('td', null, entry.lastReason === null
+                      ? h('span', { className: 'mydsh-hint' }, '—')
+                      : h(Badge, { tone: entry.lastReason === 'completed' ? 'success' : 'warn' }, entry.lastReason)),
+                    h('td', { className: 'num' }, entry.attempts),
+                    h('td', null, entry.pendingInMs === null
+                      ? h('span', { className: 'mydsh-hint' }, t('retry.notQueued'))
+                      : h(Badge, { tone: 'info' }, t('retry.inMs', { ms: entry.pendingInMs }))),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ),
+
       h(Card, { title: t('retry.ledger'), description: t('retry.ledgerHint') },
         (status.data?.recent ?? []).length === 0
           ? h(Empty, { title: t('retry.noLedger') })

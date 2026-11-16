@@ -288,6 +288,27 @@ await check('settings: every declared field exists in the defaults', async () =>
   }
 });
 
+await check('settings: no field is declared in two sections', async () => {
+  // Two declarations of one key render the same control on two different pages, and both
+  // edit the same stored value behind the other's back — the display page and the
+  // interface page had drifted into exactly that for three toggles. `enabled` is exempt
+  // because it is each module's own on/off switch and lives in every section by design.
+  const { collection } = await import('../lib/host/settings-meta.js');
+  const owner = new Map();
+  const shared = [];
+
+  for (const [section, definition] of Object.entries(collection)) {
+    for (const field of definition.fields) {
+      if (field.key === 'enabled') continue;
+      const previous = owner.get(field.key);
+      if (previous !== undefined) shared.push(`${field.key} in "${previous}" and "${section}"`);
+      else owner.set(field.key, section);
+    }
+  }
+
+  assert.deepEqual(shared, []);
+});
+
 // ── retry ledger ───────────────────────────────────────────────────────────
 await check('retry: the ledger records outcomes and stays bounded', async () => {
   const { RetryLedger, previewBackoff } = await import('../lib/host/retry/engine.js');

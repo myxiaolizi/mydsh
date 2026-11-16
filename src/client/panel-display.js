@@ -132,15 +132,10 @@ export function DisplayPanel() {
           onChange: (brandName) => set({ brandName }),
         }),
       ),
-      h(FieldRow, {
-        label: t('display.compactSidebar'),
-        hint: t('display.compactSidebarHint'),
-      },
-        h(Switch, {
-          checked: display.compactSidebar === true,
-          onChange: (compactSidebar) => set({ compactSidebar }),
-        }),
-      ),
+      // Sidebar density, the titlebar account control, and the interface toggles live in
+      // the Interface panel, which is their home. They used to be declared here as well,
+      // so the same switch appeared on two pages and the two copies edited one stored
+      // value behind each other's back.
       // Session-list grouping is deliberately absent. Arranging the conversations under
       // the workspace switcher means replacing `sidebar.workspaces`, which is a
       // shadows-shipped-ui slot — taking it over would hide the shell's own list rather

@@ -1,9 +1,10 @@
 # Build output.
 #
-# `lib/` is generated from `src/` by `scripts/build-client.mjs` and by the Host's own
-# loader path, so it is rebuilt rather than reviewed. Shipping it would make every
-# source change produce a bundle diff nobody reads.
-lib/
+# Only `lib/client.js` is generated — `scripts/build-client.mjs` bundles `src/client/`
+# into it. Everything else under `lib/` (`index.js`, `host/`) is hand-written Host source
+# and must be tracked: ignoring the whole directory shipped a repository whose Host half
+# was missing, so a fresh clone could build the UI but none of the backend.
+lib/client.js
 
 # Dependencies.
 node_modules/

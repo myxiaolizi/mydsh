@@ -168,9 +168,44 @@ await check('usage: the persisted index stays a reasonable size', async () => {
     const info = await stat(join(home, 'mydsh', 'usage-index.json'));
     const perRecord = info.size / (SESSIONS * RECORDS_PER_SESSION);
     console.log(`        index: ${(info.size / 1024).toFixed(0)} KiB, ${perRecord.toFixed(0)} bytes/record`);
-    // A record holds ~10 small fields; anything past ~1 KB each means the shape grew
-    // accidentally, which would matter at 73k records.
-    assert.ok(perRecord < 1024, `index records too large: ${perRecord.toFixed(0)} bytes each`);
+    // The three repeated strings used to be spelled out per record, which took the real
+    // index to 20 MB for 73k rows and made parsing it the bulk of cold start. With the
+    // shared string table a record is well under 200 bytes; the old 1 KB cap never caught it.
+    assert.ok(perRecord < 220, `index records too large: ${perRecord.toFixed(0)} bytes each`);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+// Pooling rewrites how strings are stored, so a round trip must give back exactly the
+// records that went in — a wrong table index would silently attribute usage to the wrong
+// model, which is worse than the slowness it replaced.
+await check('usage: a persisted index round-trips through the string table', async () => {
+  const { root, home, logs } = await buildCorpus();
+  try {
+    const first = new UsageStore({ sessionQuery: countingQuery(logs), dshHome: home, logger: () => {} });
+    await first.load();
+    const before = first.peek();
+
+    // A second store on the same home reads the file the first one wrote.
+    const second = new UsageStore({ sessionQuery: countingQuery(logs), dshHome: home, logger: () => {} });
+    await second.load();
+    const after = second.peek();
+
+    // `peek()` is the record list, so compare the fields the string table actually pooled.
+    assert.equal(after.length, before.length, 'record count must survive');
+    assert.equal(
+      after.reduce((sum, r) => sum + r.total, 0),
+      before.reduce((sum, r) => sum + r.total, 0),
+      'token totals must survive',
+    );
+    for (const field of ['provider', 'model', 'workspace']) {
+      assert.deepEqual(
+        after.map((r) => r[field]).sort(),
+        before.map((r) => r[field]).sort(),
+        `${field} values must survive: a bad table index would rename them`,
+      );
+    }
   } finally {
     await rm(root, { recursive: true, force: true });
   }

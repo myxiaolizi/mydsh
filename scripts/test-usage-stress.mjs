@@ -7,7 +7,7 @@
  * against an independently computed total.
  */
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, mkdir, writeFile, utimes, stat } from 'node:fs/promises';
+import { mkdtemp, rm, mkdir, writeFile, utimes, stat, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -206,6 +206,46 @@ await check('usage: a persisted index round-trips through the string table', asy
         `${field} values must survive: a bad table index would rename them`,
       );
     }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+// A version bump must not cost a full re-read of the corpus. Version 4 wrote the pooled
+// strings inline, which this build can still read; discarding it instead meant minutes of
+// decompression on a real corpus — measured as a /usage request that never returned.
+await check('usage: a version-4 index is adopted rather than discarded', async () => {
+  const { root, home, logs } = await buildCorpus();
+  try {
+    const first = new UsageStore({ sessionQuery: countingQuery(logs), dshHome: home, logger: () => {} });
+    await first.load();
+    const before = first.peek();
+
+    // Rewrite the file the way version 4 would have: literal strings, no table, old version.
+    const indexPath = join(home, 'mydsh', 'usage-index.json');
+    const stored = JSON.parse(await readFile(indexPath, 'utf8'));
+    stored.version = 4;
+    delete stored.strings;
+    await writeFile(indexPath, JSON.stringify(stored), 'utf8');
+
+    let reads = 0;
+    const spy = {
+      readSession: async (...args) => {
+        reads += 1;
+        return logs.get(args[0]) ?? [];
+      },
+      listSessions: async () => [...logs.keys()],
+    };
+    const second = new UsageStore({ sessionQuery: spy, dshHome: home, logger: () => {} });
+    await second.load();
+    const after = second.peek();
+
+    assert.equal(reads, 0, 'a readable older index must not be re-read from the logs');
+    assert.equal(
+      after.reduce((sum, r) => sum + r.total, 0),
+      before.reduce((sum, r) => sum + r.total, 0),
+      'the adopted index must carry the same totals',
+    );
   } finally {
     await rm(root, { recursive: true, force: true });
   }

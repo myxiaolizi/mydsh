@@ -1172,6 +1172,82 @@ export const STYLES = `
 
 /* The main-column page. main renders into the central column, so the page fills it
    rather than sizing itself like a settings row. */
+/* ── the settings page ────────────────────────────────────────────────────── 
+   Configuration is collapsed rather than stacked: nine full forms laid end to end is a wall 
+   of controls, which is the problem moved rather than solved. */
+.${ROOT}-settings {
+  gap: var(--mydsh-space-2);
+}
+
+.${ROOT}-settings-group {
+  border: 1px solid var(--mydsh-border);
+  border-radius: var(--mydsh-radius);
+  background: var(--mydsh-surface);
+  overflow: hidden;
+}
+
+.${ROOT}-settings-group[data-open='true'] {
+  background: var(--mydsh-surface-raised);
+}
+
+.${ROOT}-settings-head {
+  display: flex;
+  align-items: center;
+  gap: var(--mydsh-space-3);
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  background: transparent;
+  color: var(--mydsh-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.${ROOT}-settings-head:hover {
+  background: var(--mydsh-accent-soft);
+}
+
+.${ROOT}-settings-caret {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--mydsh-text-muted);
+  transition: transform 120ms ease;
+}
+
+.${ROOT}-settings-caret[data-open='true'] {
+  transform: rotate(90deg);
+}
+
+.${ROOT}-settings-title {
+  font-size: var(--mydsh-font-md);
+  font-weight: 600;
+  flex: 0 0 auto;
+}
+
+.${ROOT}-settings-hint {
+  font-size: var(--mydsh-font-sm);
+  color: var(--mydsh-text-muted);
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.${ROOT}-settings-body {
+  padding: 4px 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mydsh-space-3);
+  border-top: 1px solid var(--mydsh-border);
+}
+
+.${ROOT}-settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mydsh-space-2);
+}
 .${ROOT}-main {
   height: 100%;
   overflow-y: auto;

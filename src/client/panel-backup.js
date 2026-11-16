@@ -13,7 +13,7 @@
 import React from 'react';
 import { Badge, Card, Empty, Segments, Stat, formatBytes, formatRelative } from './ui.js';
 import { api, useAsync } from './data.js';
-import { FieldForm, FieldRow, ModuleToggle, useSettings } from './settings-page.js';
+import { useSettings } from './settings-page.js';
 import { useT } from './i18n-react.js';
 
 const h = React.createElement;
@@ -136,13 +136,11 @@ export function BackupPanel() {
   };
 
   return h('div', { className: 'mydsh-stack', style: { gap: 'var(--mydsh-space-4)' } },
-    h(ModuleToggle, {
-      section: 'backup',
-      titleKey: 'backup.title',
-      descriptionKey: 'backup.description',
-    }),
-
-    enabled ? h(React.Fragment, null,
+    // Configuration lives on the settings tab. This page keeps the two things that are not
+    // configuration: what is about to be archived, and what happened last time.
+    enabled !== true
+      ? h(Card, null, h(Empty, { title: t('backup.disabledTitle'), hint: t('settings.whereHint') }))
+      : h(React.Fragment, null,
       // ── run card ─────────────────────────────────────────────────────────
       h(Card, {
         title: t('backup.runCard'),
@@ -165,148 +163,6 @@ export function BackupPanel() {
           : h('p', { className: 'mydsh-hint' }, t('backup.noRunsYet')),
         selectedCount === 0 ? h('p', { className: 'mydsh-notice' }, t('backup.noticeNone')) : null,
         destinations.length === 0 ? h('p', { className: 'mydsh-notice' }, t('backup.noticeNoDestination')) : null,
-      ),
-
-      // ── items ────────────────────────────────────────────────────────────
-      h(Card, { title: t('backup.items'), description: t('backup.itemsHint') },
-        ITEMS.map((item) =>
-          h(FieldRow, { key: item.key, label: t(item.labelKey), hint: t(item.hintKey) },
-            h('button', {
-              type: 'button',
-              className: 'mydsh-switch',
-              'data-on': items[item.key] === true ? 'true' : 'false',
-              role: 'switch',
-              'aria-checked': items[item.key] === true,
-              'aria-label': t(item.labelKey),
-              onClick: () => toggleItem(item.key),
-            }),
-          ),
-        ),
-      ),
-
-      // ── destinations ─────────────────────────────────────────────────────
-      h(Card, {
-        title: t('backup.destinations'),
-        description: t('backup.destinationsHint'),
-        actions: h('button', { type: 'button', className: 'mydsh-btn mydsh-btn-sm', onClick: addDestination },
-          t('backup.addDestination')),
-      },
-        destinations.length === 0
-          ? h(Empty, { title: t('backup.noDestination'), hint: t('backup.noDestinationHint') })
-          : destinations.map((destination, index) =>
-            h(DestinationEditor, {
-              key: destination.id ?? index,
-              destination,
-              onChange: (patch) => patchDestination(index, patch),
-              onRemove: () => removeDestination(index),
-            }),
-          ),
-      ),
-
-      // ── triggers ─────────────────────────────────────────────────────────
-      h(Card, { title: t('backup.triggers'), description: t('backup.triggersHint') },
-        TRIGGERS.map((trigger) =>
-          h(React.Fragment, { key: trigger.key },
-            h(FieldRow, { label: t(trigger.labelKey), hint: t(trigger.hintKey) },
-              h('button', {
-                type: 'button',
-                className: 'mydsh-switch',
-                'data-on': triggers[trigger.key] === true ? 'true' : 'false',
-                role: 'switch',
-                'aria-checked': triggers[trigger.key] === true,
-                'aria-label': t(trigger.labelKey),
-                onClick: () => toggleTrigger(trigger.key),
-              }),
-            ),
-            trigger.key === 'scheduled' && triggers.scheduled === true
-              ? h('div', { className: 'mydsh-row' },
-                h('div', { className: 'mydsh-row-text' },
-                  h('span', { className: 'mydsh-row-label' }, t('backup.schedule')),
-                  h('span', { className: 'mydsh-row-hint' }, t('backup.scheduleHint')),
-                ),
-                h('input', {
-                  className: 'mydsh-input mydsh-mono',
-                  style: { width: 160 },
-                  'aria-label': t('backup.schedule'),
-                  value: triggers.schedule ?? '0 3 * * *',
-                  onChange: (event) => update('backup', { triggers: { ...triggers, schedule: event.target.value } }),
-                }),
-              )
-              : null,
-          ),
-        ),
-      ),
-
-      // ── archive ──────────────────────────────────────────────────────────
-      h(Card, { title: t('backup.archive'), description: t('backup.archiveHint') },
-        h(FieldRow, { label: t('backup.format'), hint: t('backup.formatHint') },
-          h(Segments, {
-            value: archive.format ?? 'zip',
-            ariaLabel: t('backup.format'),
-            options: FORMATS,
-            onChange: (format) => patchArchive({ format }),
-          }),
-        ),
-        h(FieldRow, { label: t('backup.level'), hint: t('backup.levelHint') },
-          h('input', {
-            className: 'mydsh-input',
-            type: 'number',
-            style: { width: 90 },
-            min: 0,
-            max: 9,
-            'aria-label': t('backup.level'),
-            value: archive.level ?? 6,
-            onChange: (event) => patchArchive({ level: Number(event.target.value) }),
-          }),
-        ),
-        h(FieldRow, { label: t('backup.splitSize'), hint: t('backup.splitHint') },
-          h('div', { className: 'mydsh-inline' },
-            h('input', {
-              className: 'mydsh-input',
-              type: 'number',
-              style: { width: 90 },
-              min: 0,
-              'aria-label': t('backup.splitSize'),
-              value: archive.splitSizeMb ?? 0,
-              onChange: (event) => patchArchive({ splitSizeMb: Number(event.target.value) }),
-            }),
-            h('span', { className: 'mydsh-hint' }, 'MiB'),
-          ),
-        ),
-        h(FieldRow, { label: t('backup.keepCopies'), hint: t('backup.keepCopiesHint') },
-          h('input', {
-            className: 'mydsh-input',
-            type: 'number',
-            style: { width: 90 },
-            min: 1,
-            'aria-label': t('backup.keepCopies'),
-            value: archive.keepCopies ?? 7,
-            onChange: (event) => patchArchive({ keepCopies: Number(event.target.value) }),
-          }),
-        ),
-        h(FieldRow, { label: t('backup.incremental'), hint: t('backup.incrementalHint') },
-          h('button', {
-            type: 'button',
-            className: 'mydsh-switch',
-            'data-on': archive.incremental === true ? 'true' : 'false',
-            role: 'switch',
-            'aria-checked': archive.incremental === true,
-            'aria-label': t('backup.incremental'),
-            onClick: () => patchArchive({ incremental: archive.incremental !== true }),
-          }),
-        ),
-        h(FieldRow, { label: t('backup.encryptLabel'), hint: t('backup.encryptHint') },
-          h('button', {
-            type: 'button',
-            className: 'mydsh-switch',
-            'data-on': archive.encrypt === true ? 'true' : 'false',
-            role: 'switch',
-            'aria-checked': archive.encrypt === true,
-            'aria-label': t('backup.encryptLabel'),
-            disabled: (archive.format ?? 'zip') !== '7z',
-            onClick: () => patchArchive({ encrypt: archive.encrypt !== true }),
-          }),
-        ),
       ),
 
       // ── history ──────────────────────────────────────────────────────────
@@ -345,10 +201,7 @@ export function BackupPanel() {
           ),
       ),
 
-      h(Card, { title: t('backup.retentionCard') },
-        h(FieldForm, { section: 'backup' }),
       ),
-    ) : null,
   );
 }
 

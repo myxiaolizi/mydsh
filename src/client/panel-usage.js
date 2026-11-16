@@ -29,7 +29,7 @@ import {
   formatRelative,
 } from './ui.js';
 import { api, useAsync } from './data.js';
-import { ModuleToggle, FieldForm, useSettings } from './settings-page.js';
+import { useSettings } from './settings-page.js';
 import { useT, useLocale, useFailureText } from './i18n-react.js';
 
 const h = React.createElement;
@@ -128,13 +128,11 @@ export function UsagePanel() {
   );
 
   return h('div', { className: 'mydsh-stack', style: { gap: 'var(--mydsh-space-4)' } },
-    h(ModuleToggle, {
-      section: 'usage',
-      titleKey: 'usage.title',
-      descriptionKey: 'usage.description',
-    }),
-
-    enabled ? h(React.Fragment, null,
+    // This page reports usage; its configuration lives on the settings tab. A module that is
+    // off is reported here rather than offered, so the two places never disagree.
+    enabled !== true
+      ? h(Card, null, h(Empty, { title: t('usage.trackingOff'), hint: t('settings.whereHint') }))
+      : h(React.Fragment, null,
       h(Card, {
         title: t('usage.overview'),
         description: t('usage.overviewHint'),
@@ -224,11 +222,7 @@ export function UsagePanel() {
       h(BalanceCard, null),
       h(BudgetCard, null),
       h(SessionsCard, null),
-
-      h(Card, { title: t('usage.display'), description: t('usage.displayHint') },
-        h(FieldForm, { section: 'usage' }),
       ),
-    ) : null,
   );
 }
 /**

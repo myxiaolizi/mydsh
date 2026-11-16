@@ -12,7 +12,7 @@
 import React from 'react';
 import { Badge, Card, Empty } from './ui.js';
 import { api, useAsync } from './data.js';
-import { FieldForm, FieldRow, ModuleToggle, useSettings } from './settings-page.js';
+import { FieldRow, useSettings } from './settings-page.js';
 import { useT } from './i18n-react.js';
 import { describeFailure } from './failure.js';
 
@@ -59,13 +59,10 @@ export function PromptPanel() {
   const values = settings?.prompt ?? {};
 
   return h('div', { className: 'mydsh-stack', style: { gap: 'var(--mydsh-space-4)' } },
-    h(ModuleToggle, {
-      section: 'prompt',
-      titleKey: 'prompt.title',
-      descriptionKey: 'prompt.description',
-    }),
-
-    enabled ? h(React.Fragment, null,
+    // Configuration lives on the settings tab; this page keeps the live view.
+    enabled !== true
+      ? h(Card, null, h(Empty, { title: t('prompt.disabledTitle'), hint: t('settings.whereHint') }))
+      : h(React.Fragment, null,
       h(Card, {
         title: t('prompt.instructions'),
         description: t('prompt.instructionsHint'),
@@ -95,9 +92,8 @@ export function PromptPanel() {
           ),
         ),
         h('p', { className: 'mydsh-hint' }, t('prompt.advisoryHint')),
-        h(FieldForm, { section: 'prompt' }),
       ),
-    ) : null,
+    ),
   );
 }
 
@@ -140,13 +136,10 @@ export function RemotePanel() {
   const state = status.data?.status?.state ?? 'off';
 
   return h('div', { className: 'mydsh-stack', style: { gap: 'var(--mydsh-space-4)' } },
-    h(ModuleToggle, {
-      section: 'remote',
-      titleKey: 'remote.title',
-      descriptionKey: 'remote.description',
-    }),
-
-    enabled ? h(React.Fragment, null,
+    // Configuration lives on the settings tab; this page keeps the live view.
+    enabled !== true
+      ? h(Card, null, h(Empty, { title: t('remote.disabledTitle'), hint: t('settings.whereHint') }))
+      : h(React.Fragment, null,
       h(Card, {
         title: t('remote.connection'),
         actions: h('div', { className: 'mydsh-inline' },
@@ -211,11 +204,7 @@ export function RemotePanel() {
         ),
         h('p', { className: 'mydsh-hint' }, t('remote.securityDocs')),
       ),
-
-      h(Card, { title: t('remote.allSettings') },
-        h(FieldForm, { section: 'remote' }),
-      ),
-    ) : null,
+    ),
   );
 }
 
@@ -256,13 +245,10 @@ export function ToolboxPanel() {
   };
 
   return h('div', { className: 'mydsh-stack', style: { gap: 'var(--mydsh-space-4)' } },
-    h(ModuleToggle, {
-      section: 'toolbox',
-      titleKey: 'toolbox.title',
-      descriptionKey: 'toolbox.description',
-    }),
-
-    enabled ? h(React.Fragment, null,
+    // Configuration lives on the settings tab; this page keeps the live view.
+    enabled !== true
+      ? h(Card, null, h(Empty, { title: t('toolbox.disabledTitle'), hint: t('settings.whereHint') }))
+      : h(React.Fragment, null,
       h(Card, { title: t('toolbox.capabilities'), description: t('toolbox.capabilitiesHint') },
         TOOLBOX_MODULES.map((module) => {
           // A module this build cannot implement is reported, not offered: a switch that
@@ -350,6 +336,6 @@ export function ToolboxPanel() {
               ),
             ),
       ),
-    ) : null,
+    ),
   );
 }

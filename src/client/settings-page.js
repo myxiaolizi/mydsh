@@ -32,7 +32,9 @@ export const TABS = [
   // The dashboard is first so the plugin opens on figures rather than on a configuration
   // screen; `active` falls back to visible[0], which makes this the landing tab.
   { id: 'dashboard', labelKey: 'tab.dashboard', icon: 'chart', section: 'usage' },
-  { id: 'display', labelKey: 'tab.display', icon: 'settings', section: null },
+  // Configuration lives here and only here; `section: null` keeps it reachable even when
+  // every module is off, which is the state it most needs to be usable in.
+  { id: 'settings', labelKey: 'tab.settings', icon: 'settings', section: null },
   { id: 'interface', labelKey: 'tab.interface', icon: 'palette', section: 'interface' },
   { id: 'usage', labelKey: 'tab.usage', icon: 'chart', section: 'usage' },
   { id: 'backup', labelKey: 'tab.backup', icon: 'database', section: 'backup' },

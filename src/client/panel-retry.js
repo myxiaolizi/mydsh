@@ -14,7 +14,7 @@
 import React from 'react';
 import { Badge, Card, Empty, Segments, cx, formatRelative } from './ui.js';
 import { api, useAsync } from './data.js';
-import { FieldForm, FieldRow, ModuleToggle, useSettings } from './settings-page.js';
+import { FieldRow, useSettings } from './settings-page.js';
 import { useT, useFailureText } from './i18n-react.js';
 
 const h = React.createElement;
@@ -125,16 +125,11 @@ export function RetryPanel() {
   };
 
   return h('div', { className: 'mydsh-stack', style: { gap: 'var(--mydsh-space-4)' } },
-    h(ModuleToggle, {
-      section: 'retry',
-      titleKey: 'retry.title',
-      descriptionKey: 'retry.description',
-    }),
-
-    enabled ? h(React.Fragment, null,
-      h(Card, { title: t('retry.defaults'), description: t('retry.defaultsHint') },
-        h(FieldForm, { section: 'retry' }),
-      ),
+    // Configuration lives on the settings tab; this page shows what the engine did and is
+    // doing. The preview rows below stay because they are a reading, not a form.
+    enabled !== true
+      ? h(Card, null, h(Empty, { title: t('retry.disabledTitle'), hint: t('settings.whereHint') }))
+      : h(React.Fragment, null,
 
       h(Card, {
         title: t('retry.policies'),
@@ -260,7 +255,7 @@ export function RetryPanel() {
             ),
           ),
       ),
-    ) : null,
+      ),
   );
 }
 

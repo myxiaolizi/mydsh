@@ -33,6 +33,9 @@ const patches = await readFile(join(ROOT, 'src/client/interface-patches.js'), 'u
 const usagePanel = await readFile(join(ROOT, 'src/client/panel-usage.js'), 'utf8');
 const theme = await readFile(join(ROOT, 'src/client/theme.js'), 'utf8');
 const dashboard = await readFile(join(ROOT, 'src/client/panel-dashboard.js'), 'utf8');
+const settingsPanel = await readFile(join(ROOT, 'src/client/panel-settings.js'), 'utf8');
+const featurePanels = await Promise.all(['panel-usage.js', 'panel-backup.js', 'panel-retry.js', 'panel-misc.js', 'panel-dashboard.js']
+  .map((name) => readFile(join(ROOT, 'src/client', name), 'utf8')));
 
 let failures = 0;
 const check = (name, fn) => {
@@ -239,5 +242,43 @@ check('dashboard: it never displays a zero it has not measured', () => {
   assert.match(dashboard, /settling[\s\S]{0,120}?common\.loading/, 'and shown as loading rather than as zeros');
   assert.match(dashboard, /usage\.error !== undefined/, 'a failed read must surface, not render as zero');
 });
-console.log(`\nwiring: ${16 - failures}/16 passed`);
+check('settings: configuration lives on one page, not scattered per feature', () => {
+  // Every module page used to carry its own switch and settings form, so a feature page read
+  // as a form and the thing you came to see was buried under the thing you configure once.
+  const withForms = featurePanels.filter((source) => source.includes("h(FieldForm,"));
+  assert.equal(withForms.length, 0, 'no feature page may render a settings form');
+  const withSwitches = featurePanels.filter((source) => source.includes("h(ModuleToggle,"));
+  assert.equal(withSwitches.length, 0, 'no feature page may render a module switch');
+
+  // And the settings page must actually cover every declared section, or a switch has no home.
+  for (const section of ['display', 'interface', 'usage', 'budget', 'backup', 'retry', 'prompt', 'remote', 'toolbox']) {
+    assert.ok(settingsPanel.includes(`'${section}'`), `${section} is missing from the settings page`);
+  }
+});
+
+check('settings: a switched-off feature reports itself instead of offering its switch', () => {
+  // The replacement for the inline switch: the page says the module is off and points at the
+  // settings tab, rather than duplicating a control that belongs elsewhere.
+  for (const source of featurePanels) {
+    const off = source.includes('enabled !== true');
+    // The dashboard decides differently (it has no module of its own), so only assert where a
+    // module gate exists at all.
+    if (source.includes('usage.trackingOff') || source.includes('.disabledTitle')) {
+      assert.ok(off || source.includes('.disabledTitle'), 'a gated feature page must report the off state');
+    }
+  }
+  // The pointer belongs on the feature page (it is what the user sees when the module is off),
+  // not on the settings page itself.
+  const pointing = featurePanels.filter((source) => source.includes('settings.whereHint'));
+  assert.ok(pointing.length > 0, 'a switched-off feature must say where to turn it on');
+});
+
+check('settings: the settings page is reachable while modules are off', () => {
+  // A page you cannot reach while things are off cannot turn them back on.
+  const tabs = settingsPage.slice(settingsPage.indexOf('export const TABS'));
+  const settingsTab = tabs.match(/\{ id: 'settings'[^}]*\}/);
+  assert.ok(settingsTab, 'the settings tab must exist');
+  assert.match(settingsTab[0], /section: null/, 'and must not be hidden by a module switch');
+});
+console.log(`\nwiring: ${19 - failures}/19 passed`);
 process.exit(failures === 0 ? 0 : 1);

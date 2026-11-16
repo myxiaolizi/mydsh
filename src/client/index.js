@@ -42,6 +42,7 @@ import { Icon } from './ui.js';
 import { DisplayPanel } from './panel-display.js';
 import { UsagePanel } from './panel-usage.js';
 import { Dashboard } from './panel-dashboard.js';
+import { SettingsPanel } from './panel-settings.js';
 import { BackupPanel } from './panel-backup.js';
 import { RetryPanel } from './panel-retry.js';
 import { InterfacePanel } from './panel-interface.js';
@@ -72,7 +73,7 @@ const IDS = {
 /** Which settings section panel renders for each tab. */
 const PANELS = {
   dashboard: Dashboard,
-  display: DisplayPanel,
+  settings: SettingsPanel,
   interface: InterfacePanel,
   usage: UsagePanel,
   backup: BackupPanel,

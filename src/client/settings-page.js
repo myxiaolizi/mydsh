@@ -15,7 +15,7 @@
  *    Display tab where the user chooses what exists at all.
  */
 import React from 'react';
-import { Card, cx, Icon, Segments, Badge, ErrorBanner } from './ui.js';
+import { Card, cx, Empty, Icon, Segments, Badge, ErrorBanner } from './ui.js';
 import { api, useAsync } from './data.js';
 import { useT } from './i18n-react.js';
 
@@ -38,6 +38,14 @@ export const TABS = [
   { id: 'remote', labelKey: 'tab.remote', icon: 'globe', section: 'remote' },
   { id: 'toolbox', labelKey: 'tab.toolbox', icon: 'toolbox', section: 'toolbox' },
 ];
+
+/**
+ * The sections whose switches decide whether the plugin is reachable at all.
+ *
+ * Restoring only these keeps a recovery from overwriting a user's real configuration;
+ * `display` is included because its placement fields are what put the entry on screen.
+ */
+const RESTORE_SECTIONS = ['display', 'interface', 'usage', 'toolbox'];
 
 /**
  * Shared settings context.
@@ -162,8 +170,55 @@ export function SettingsPage({ panels }) {
         ),
       ),
     ),
-    Panel === undefined ? null : h(Panel),
+    Panel === undefined
+      // Every module switched off leaves no tab to render and no way back: the only
+      // controls that could re-enable them live inside those same tabs. This is the one
+      // state the page must diagnose and repair itself rather than merely report.
+      ? h(Empty, {
+        title: t('settings.allOff'),
+        hint: t('settings.allOffHint'),
+        action: h(RecoverDefaults, null),
+      })
+      : h(Panel),
   );
+}
+
+/**
+ * Put the shipped defaults back for the fields that decide reachability.
+ *
+ * Deliberately narrow: it restores the module switches and the placement fields only, not
+ * the rest of the configuration. A user whose entry vanished keeps their backup targets,
+ * retry policy, and prompt text.
+ */
+function RecoverDefaults() {
+  const { update, defaults } = useSettings();
+  const t = useT();
+  const [busy, setBusy] = React.useState(false);
+
+  const restore = async () => {
+    setBusy(true);
+    try {
+      for (const section of RESTORE_SECTIONS) {
+        const shipped = defaults?.[section] ?? {};
+        const patch = { enabled: shipped.enabled === true };
+        // A stored `hidden` survives an `enabled` flip, so the placement keys come back
+        // from the defaults too.
+        for (const key of ['entry', 'usagePlacement', 'fleetPlacement']) {
+          if (shipped[key] !== undefined) patch[key] = shipped[key];
+        }
+        await update(section, patch);
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return h('button', {
+    type: 'button',
+    className: 'mydsh-btn',
+    disabled: busy,
+    onClick: restore,
+  }, busy ? t('common.save') + '…' : t('settings.restoreDefaults'));
 }
 
 /**

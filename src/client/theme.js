@@ -1002,6 +1002,21 @@ export const STYLES = `
   padding: 6px;
 }
 
+/* Titlebar form. The header row is tight, so this is an icon-only square that matches the
+   icon buttons beside it rather than the sidebar's full-width row. */
+.${ROOT}-entry-compact {
+  justify-content: center;
+  padding: 5px;
+  gap: 0;
+  background: transparent;
+  border-color: transparent;
+}
+
+.${ROOT}-entry-compact:hover {
+  background: var(--mydsh-accent-soft);
+  border-color: var(--mydsh-border);
+}
+
 .${ROOT}-inline {
   display: flex;
   align-items: center;
@@ -1183,9 +1198,51 @@ export const STYLES = `
   box-shadow: 0 18px 48px rgb(0 0 0 / 22%);
 }
 
-.${ROOT}-insight-header {
+/* The usage page as a floating panel, opened from the sidebar entry. It reuses the insight
+   backdrop geometry so the two overlays behave identically; only the frame width differs,
+   because this one holds a settings-style panel rather than a single ranking column. */
+.${ROOT}-usage-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 38;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  background: color-mix(in srgb, var(--dsw-alias-bg-base) 62%, transparent);
+  backdrop-filter: blur(2px);
+}
+
+.${ROOT}-usage-panel {
+  width: min(760px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mydsh-space-3);
+  padding: 20px 22px 24px;
+  border-radius: 14px;
+  border: 1px solid var(--mydsh-border);
+  background: var(--mydsh-surface-raised);
+  box-shadow: 0 18px 48px rgb(0 0 0 / 22%);
+}
+
+.${ROOT}-usage-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mydsh-space-3);
+}
+
+.${ROOT}-usage-title {
+  margin: 0;
+  font-size: var(--mydsh-font-lg);
+  font-weight: 600;
+  color: var(--mydsh-text);
+}
+
+.${ROOT}-insight-header {
+  display: flex;  align-items: flex-start;
   justify-content: space-between;
   gap: var(--mydsh-space-4);
 }

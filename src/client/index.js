@@ -47,7 +47,7 @@ import { InterfacePanel } from './panel-interface.js';
 import { PromptPanel, RemotePanel, ToolboxPanel } from './panel-misc.js';
 import { InsightPage } from './panel-insight.js';
 import { FleetPage } from './panel-fleet.js';
-import { insightOpen, fleetState, openFleet, closeFleet, useValue } from './store.js';
+import { insightOpen, usageOpen, fleetState, openFleet, closeFleet, useValue } from './store.js';
 
 const h = React.createElement;
 
@@ -58,8 +58,10 @@ const IDS = {
   brandName: 'mydsh-brand-name',
   account: 'mydsh-account-chip',
   entry: 'mydsh-entry',
+  titlebarEntry: 'mydsh-titlebar-entry',
   entryIcon: 'mydsh-entry-icon',
   insight: 'mydsh-insight',
+  usage: 'mydsh-usage',
   fleet: 'mydsh-fleet',
   fleetEntry: 'mydsh-fleet-entry',
   fleetSidebar: 'mydsh-fleet-sidebar',
@@ -80,6 +82,65 @@ const PANELS = {
 /** The context every settings surface needs, so one provider serves them all. */
 function Providers({ ctx, children }) {
   return h(I18nProvider, { ctx }, h(SettingsProvider, null, children));
+}
+
+/**
+ * The usage page as a floating panel, opened from the sidebar entry.
+ *
+ * The sidebar entry cannot reach the shell's settings modal: its open action is an owner
+ * prop of `settings.launcher`, a `single` slot the shell already occupies, so nothing else
+ * can read it. Rendering the same panel here means one click from the sidebar shows the
+ * numbers without leaving the conversation, while the settings page keeps its own copy.
+ *
+ * `Providers` supplies the i18n and settings contexts the panel reads; without them every
+ * field would render against `undefined`.
+ */
+function UsageOverlay({ ctx }) {
+  const open = useValue(usageOpen);
+
+  React.useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (event) => {
+      if (event.key === 'Escape') usageOpen.set(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
+  if (!open) return null;
+  return h('div', {
+    className: 'mydsh-usage-backdrop',
+    // Clicking the dimmed area closes, matching every other modal in the shell. The panel
+    // stops propagation so a click inside does not close it.
+    onClick: () => usageOpen.set(false),
+  },
+    h('div', {
+      className: 'mydsh-usage-panel',
+      role: 'dialog',
+      'aria-modal': 'true',
+      onClick: (event) => event.stopPropagation(),
+    },
+      h(Providers, { ctx },
+        h(UsagePanelShell, { onClose: () => usageOpen.set(false) }),
+      ),
+    ),
+  );
+}
+
+/** Heading row plus the shared usage panel, so the overlay carries its own close affordance. */
+function UsagePanelShell({ onClose }) {
+  const t = useT();
+  return h(React.Fragment, null,
+    h('div', { className: 'mydsh-usage-head' },
+      h('h2', { className: 'mydsh-usage-title' }, t('nav.title')),
+      h('button', {
+        type: 'button',
+        className: 'mydsh-btn mydsh-btn-sm',
+        onClick: onClose,
+      }, t('common.close')),
+    ),
+    h(UsagePanel, null),
+  );
 }
 
 /**
@@ -311,28 +372,49 @@ function SidebarEntry({ ctx, wide }) {
   const today = useTodayTokens(showBadge);
   if (display.entry !== 'sidebar') return null;
 
-  const openPlugin = () => {
-    try {
-      ctx?.get?.('layout')?.selectPanel?.('settings');
-    } catch {
-      // A build without the layout service leaves the button inert rather than
-      // throwing inside a click handler.
-    }
-  };
+  return h(PluginEntryButton, { wide, today, showBadge });
+}
+
+/**
+ * The plugin entry as a titlebar control.
+ *
+ * `display.entry` offers `sidebar`, `settings`, `titlebar`, and `hidden`, but only the
+ * sidebar seat was implemented: choosing any other value left the plugin with no entry at
+ * all, which reads as "the plugin is broken" rather than "the entry is elsewhere". This is
+ * the titlebar form, seated in `conversation.header.leading` — the same row the sidebar
+ * header renders, so it appears beside the conversation title.
+ */
+function TitlebarEntry({ ctx }) {
+  const { settings } = useSettings();
+  const display = settings?.display ?? {};
+  if (display.entry !== 'titlebar') return null;
+  return h(PluginEntryButton, { wide: false, today: undefined, showBadge: false, compact: true });
+}
+
+/**
+ * The button itself, shared by every seat so the icon, label and action cannot drift apart.
+ *
+ * Clicking opens the plugin's own floating usage panel. It used to call
+ * `layout.selectPanel('settings')`, which silently did nothing: `selectPanel` takes a
+ * registered *main* panel key and throws for anything else, and the try/catch that was
+ * meant to keep the handler safe also swallowed the failure — so the button looked dead.
+ */
+function PluginEntryButton({ wide, today, showBadge, compact }) {
+  const t = useT();
+  const open = () => usageOpen.set(true);
 
   return h('button', {
     type: 'button',
-    className: 'mydsh-entry',
+    className: compact === true ? 'mydsh-entry mydsh-entry-compact' : 'mydsh-entry',
     'data-wide': wide === false ? 'false' : 'true',
     title: t('nav.title'),
     'aria-label': t('nav.title'),
-    onClick: openPlugin,
+    onClick: open,
   },
-    h(BrandMark, { size: wide === false ? 18 : 16, label: t('nav.title') }),
-    wide === false ? null : h('span', { className: 'mydsh-entry-label' }, t('nav.title')),
-    // The count is a secondary cue, so it only appears in the wide row where there is
-    // room for it; the rail has none.
-    wide === false || showBadge !== true || today === undefined
+    h(BrandMark, { size: compact === true ? 16 : (wide === false ? 18 : 16), label: t('nav.title') }),
+    compact === true || wide === false ? null : h('span', { className: 'mydsh-entry-label' }, t('nav.title')),
+    // The count is a secondary cue, so it only appears where there is room for it.
+    compact === true || wide === false || showBadge !== true || today === undefined
       ? null
       : h('span', { className: 'mydsh-entry-count' }, formatNumber(today)),
   );
@@ -476,6 +558,17 @@ export function apply(ctx) {
     }, () => h(Providers, { ctx }, h(AccountSlot, { ctx }))),
   );
 
+  // The plugin entry when the user places it in the titlebar. Without this, choosing
+  // `titlebar` in `display.entry` left the plugin with no entry anywhere.
+  guard('conversation.header.leading', () =>
+    mount(ctx, 'conversation.header.leading', {
+      name: 'conversation.header.leading',
+      id: IDS.titlebarEntry,
+      // After the account chip, so the chip keeps its usual left-most position.
+      order: 20,
+    }, () => h(Providers, { ctx }, h(TitlebarEntry, { ctx }))),
+  );
+
   // The cross-session insight page. `shell.overlay` is a list slot with
   // `replaceRisk: none` that floats above every column, so the page can be added without
   // occupying `main` (keyed by sidebar entry id, and where the conversation renders).
@@ -486,6 +579,16 @@ export function apply(ctx) {
       id: IDS.insight,
       order: 40,
     }, () => h(Providers, { ctx }, h(InsightOverlay, null))),
+  );
+
+  guard('shell.overlay', () =>
+    mount(ctx, 'shell.overlay', {
+      name: 'shell.overlay',
+      id: IDS.usage,
+      // The lowest order of the three: the usage panel is what the sidebar entry opens, so
+      // it can end up underneath the insight or family page rather than over them.
+      order: 30,
+    }, () => h(UsageOverlay, { ctx })),
   );
 
   // The agent-family page shares the floating layer, ordered after the insight page so

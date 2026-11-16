@@ -66,6 +66,17 @@ export function useValue(store) {
 export const insightOpen = createStore(false);
 
 /**
+ * Whether the usage page is open as a floating panel.
+ *
+ * The sidebar entry has to open something without navigating away from the conversation,
+ * and the shell owns the settings modal — its open action is delivered as an owner prop to
+ * `settings.launcher`, which a list slot cannot reach. Rendering the usage panel in
+ * `shell.overlay` instead keeps the entry self-contained and never displaces the shell's own
+ * settings trigger.
+ */
+export const usageOpen = createStore(false);
+
+/**
  * The agent-family page: whether it is open and which session it belongs to.
  *
  * The session is part of the state because a family has no meaning without one; the

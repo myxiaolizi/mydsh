@@ -203,8 +203,9 @@ export function UsagePanel() {
             })
             : h(Empty, { title: t('usage.nothingRecorded') }),
         ),
-
-        h(ContextCard, null),
+          // `contextInsight` is the switch the settings page offers for this card; without the
+          // guard the toggle existed but nothing read it.
+          settings?.usage?.contextInsight === true ? h(ContextCard, null) : null,
       ),
 
       // The way into the cross-session page. It gets its own small card rather than a
@@ -234,16 +235,30 @@ export function UsagePanel() {
 function Overview({ data }) {
   const t = usePanelT();
   const totals = data?.totals ?? {};
-  return h('div', { className: 'mydsh-grid' },
+  // Every figure the aggregate carries gets a card. The panel previously showed four and
+  // left cache, reasoning, and the derived averages unstated, which made a 16-billion-token
+  // history read as one number with no breakdown.
+  const calls = totals.calls ?? 0;
+  const average = calls > 0 ? (totals.total ?? 0) / calls : 0;
+  const averageCost = calls > 0 ? (totals.cost ?? 0) / calls : 0;
+  const inputTotal = (totals.input ?? 0) + (totals.cacheRead ?? 0);
+  const cacheHit = inputTotal > 0 ? (totals.cacheRead ?? 0) / inputTotal : 0;
+
+  return h('div', { className: 'mydsh-grid mydsh-grid-wide' },
     h(Stat, {
       label: t('usage.totalTokens'),
       value: formatNumber(totals.total ?? 0),
-      sub: t('usage.callsCount', { n: formatNumber(totals.calls ?? 0) }),
+      sub: t('usage.callsCount', { n: formatNumber(calls) }),
+    }),
+    h(Stat, {
+      label: t('usage.cost'),
+      value: formatMoney(totals.cost ?? 0),
+      sub: t('usage.fromPriceTable'),
     }),
     h(Stat, {
       label: t('usage.input'),
       value: formatNumber(totals.input ?? 0),
-      sub: totals.cacheRead > 0 ? t('usage.cachedCount', { n: formatNumber(totals.cacheRead) }) : undefined,
+      sub: t('usage.averagePerCall', { n: formatNumber(average) }),
     }),
     h(Stat, {
       label: t('usage.output'),
@@ -251,9 +266,24 @@ function Overview({ data }) {
       sub: totals.reasoning > 0 ? t('usage.reasoningCount', { n: formatNumber(totals.reasoning) }) : undefined,
     }),
     h(Stat, {
-      label: t('usage.cost'),
-      value: formatMoney(totals.cost ?? 0),
-      sub: t('usage.fromPriceTable'),
+      label: t('usage.cacheRead'),
+      value: formatNumber(totals.cacheRead ?? 0),
+      sub: t('usage.cacheHitRate', { p: (cacheHit * 100).toFixed(1) }),
+    }),
+    h(Stat, {
+      label: t('usage.cacheWrite'),
+      value: formatNumber(totals.cacheWrite ?? 0),
+      sub: totals.cacheWrite > 0 ? t('usage.cacheWriteHint') : t('usage.cacheWriteNone'),
+    }),
+    h(Stat, {
+      label: t('usage.calls'),
+      value: formatNumber(calls),
+      sub: t('usage.averageCostPerCall', { v: formatMoney(averageCost) }),
+    }),
+    h(Stat, {
+      label: t('usage.bucketCount'),
+      value: formatNumber(data?.buckets?.length ?? 0),
+      sub: t('usage.bucketHint'),
     }),
   );
 }

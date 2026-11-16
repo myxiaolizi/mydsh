@@ -86,17 +86,26 @@ export function applyInterfacePatches(settings) {
   flag('compact', display.compactSidebar);
 }
 
-/** Hook that applies patches whenever the settings snapshot changes. */
+/**
+ * Hook that applies patches whenever the settings snapshot changes.
+ *
+ * This must live on a component that is always mounted. It used to sit inside the settings
+ * page, which meant every patch was undone the moment the user closed the page: the effect's
+ * cleanup ran on unmount and stripped the body attributes, so "hide the new-session button"
+ * appeared to work and then silently reverted. The cleanup now only runs when the plugin
+ * itself unloads, which is the only case where the shell really should be restored.
+ */
 export function useInterfacePatches(settings) {
   React.useEffect(() => {
     applyInterfacePatches(settings);
-    return () => {
-      // Unloading must not leave the shell hidden.
-      for (const name of ['hide-new-session', 'compact']) {
-        document.body?.removeAttribute(`data-mydsh-${name}`);
-      }
-    };
   }, [settings]);
+
+  React.useEffect(() => () => {
+    // Unloading must not leave the shell altered. This runs once, on plugin teardown.
+    for (const name of ['hide-new-session', 'compact', 'hide-brand-mark', 'hide-brand-name']) {
+      document.body?.removeAttribute(`data-mydsh-${name}`);
+    }
+  }, []);
 }
 
 /**

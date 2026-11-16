@@ -1017,6 +1017,57 @@ export const STYLES = `
   border-color: var(--mydsh-border);
 }
 
+/* Rail icon for the plugin's own main panel. The slot owner supplies the edge and the
+   selected state, so this only supplies centring and the selected tint. */
+.${ROOT}-panel-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: var(--mydsh-text-muted);
+}
+
+.${ROOT}-panel-icon[data-active='true'] {
+  color: var(--mydsh-accent);
+}
+
+/* The main-column page. main renders into the central column, so the page fills it
+   rather than sizing itself like a settings row. */
+.${ROOT}-main {
+  height: 100%;
+  overflow-y: auto;
+  padding: 20px 22px 28px;
+}
+
+/* Token readout at the sidebar foot: figures only, no product name. */
+.${ROOT}-readout {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  color: var(--mydsh-text-muted);
+  font-size: var(--mydsh-font-xs);
+  line-height: 1.2;
+  user-select: none;
+}
+
+.${ROOT}-readout[data-wide='false'] {
+  justify-content: center;
+  padding: 4px;
+}
+
+.${ROOT}-readout-tokens {
+  color: var(--mydsh-text);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.${ROOT}-readout-label {
+  font-size: 10px;
+  opacity: 0.75;
+}
+
 .${ROOT}-inline {
   display: flex;
   align-items: center;
@@ -1187,15 +1238,47 @@ export const STYLES = `
 .${ROOT}-insight-page {
   width: min(880px, 100%);
   max-height: 100%;
-  overflow-y: auto;
+  /* Same reasoning as the usage panel: the frame holds a heading row, so the frame must not
+     scroll or the close button travels with the content. */
   display: flex;
   flex-direction: column;
-  gap: var(--mydsh-space-4);
-  padding: 22px 24px 26px;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
   border-radius: 14px;
   border: 1px solid var(--mydsh-border);
   background: var(--mydsh-surface-raised);
   box-shadow: 0 18px 48px rgb(0 0 0 / 22%);
+}
+
+/* The scrolling region of a page overlay: everything after the heading. The heading itself
+   is sticky so it stays visible while the rest scrolls under it. */
+.${ROOT}-insight-page > .${ROOT}-insight-header,
+.${ROOT}-fleet-page > .${ROOT}-insight-header {
+  flex: 0 0 auto;
+  padding: 22px 24px 14px;
+  border-bottom: 1px solid var(--mydsh-border);
+  background: var(--mydsh-surface-raised);
+  border-radius: 14px 14px 0 0;
+}
+
+.${ROOT}-insight-page > :not(.${ROOT}-insight-header),
+.${ROOT}-fleet-page > :not(.${ROOT}-insight-header) {
+  padding-left: 24px;
+  padding-right: 24px;
+  flex: 0 0 auto;
+}
+
+.${ROOT}-insight-page > *:last-child,
+.${ROOT}-fleet-page > *:last-child {
+  padding-bottom: 26px;
+}
+
+/* The middle region scrolls; the heading above it does not. */
+.${ROOT}-insight-page,
+.${ROOT}-fleet-page {
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* The usage page as a floating panel, opened from the sidebar entry. It reuses the insight
@@ -1215,23 +1298,44 @@ export const STYLES = `
 
 .${ROOT}-usage-panel {
   width: min(760px, 100%);
+  /* The frame itself must not scroll: the heading row is its first child, so scrolling the
+     frame carried the close button away with the content. Fixed height, and the body alone
+     scrolls. */
   max-height: 100%;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: var(--mydsh-space-3);
-  padding: 20px 22px 24px;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
   border-radius: 14px;
   border: 1px solid var(--mydsh-border);
   background: var(--mydsh-surface-raised);
   box-shadow: 0 18px 48px rgb(0 0 0 / 22%);
 }
 
+.${ROOT}-usage-body {
+  /* Only this scrolls, so the heading stays put. min-height:0 is what lets a flex child
+     shrink below its content and actually produce a scrollbar. */
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mydsh-space-3);
+}
+
 .${ROOT}-usage-head {
+  /* Sticky within the frame: the heading is outside the scroller, so it needs no
+     position:sticky, but it does need to never shrink when the body is tall. */
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--mydsh-space-3);
+  padding: 18px 22px 12px;
+  border-bottom: 1px solid var(--mydsh-border);
+  background: var(--mydsh-surface-raised);
+  border-radius: 14px 14px 0 0;
 }
 
 .${ROOT}-usage-title {

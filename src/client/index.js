@@ -37,7 +37,7 @@ import { PATCH_STYLES, AccountChip, BrandMark, BrandName, useInterfacePatches } 
 import { SettingsPage, SettingsProvider, useSettings } from './settings-page.js';
 import { I18nProvider, useT } from './i18n-react.js';
 import { api } from './data.js';
-import { formatNumber } from './format.js';
+import { formatNumber, formatMoney } from './format.js';
 import { Icon } from './ui.js';
 import { DisplayPanel } from './panel-display.js';
 import { UsagePanel } from './panel-usage.js';
@@ -62,6 +62,7 @@ const IDS = {
   entryIcon: 'mydsh-entry-icon',
   insight: 'mydsh-insight',
   usage: 'mydsh-usage',
+  patches: 'mydsh-patches',
   fleet: 'mydsh-fleet',
   fleetEntry: 'mydsh-fleet-entry',
   fleetSidebar: 'mydsh-fleet-sidebar',
@@ -95,8 +96,82 @@ function Providers({ ctx, children }) {
  * `Providers` supplies the i18n and settings contexts the panel reads; without them every
  * field would render against `undefined`.
  */
-function UsageOverlay({ ctx }) {
-  const open = useValue(usageOpen);
+/**
+ * The rail icon for the plugin's own main panel.
+ *
+ * `sidebar.panellist` supplies the square edge it reserved and whether the panel is
+ * selected, so the mark follows the column's geometry and highlight state instead of
+ * guessing either from CSS.
+ */
+function PanelIcon({ size, active }) {
+  const edge = typeof size === 'number' && size > 0 ? size : 20;
+  return h('span', {
+    className: 'mydsh-panel-icon',
+    'data-active': active === true ? 'true' : 'false',
+  }, h(BrandMark, { size: edge }));
+}
+
+/**
+ * The page the rail icon selects, rendered in the central column.
+ *
+ * This is the plugin's primary surface: everything the plugin does lives here, addressed by
+ * the tab bar inside it. It replaces the shell's conversation view only while selected,
+ * because `main` is keyed and the conversation keeps its own key.
+ */
+function MyDshMainPanel({ ctx }) {
+  return h(Providers, { ctx },
+    h('div', { className: 'mydsh mydsh-main' },
+      h(SettingsGate, null),
+    ),
+  );
+}
+
+/**
+ * Token and cost at the sidebar foot.
+ *
+ * The user asked for the numbers only — the product name belongs on the rail icon, which is
+ * the thing that identifies the plugin. In the collapsed rail there is no room for figures,
+ * so it renders the icon alone rather than a truncated string.
+ */
+function SidebarUsageReadout({ wide }) {
+  const { settings } = useSettings();
+  const t = useT();
+  const display = settings?.display ?? {};
+  if (display.enabled !== true) return null;
+  if (display.entry === 'hidden') return null;
+
+  const show = display.sidebarBadge === true;
+  const today = useTodayTokens(show);
+  const collapsed = wide === false;
+
+  return h('div', {
+    className: 'mydsh-readout',
+    'data-wide': collapsed ? 'false' : 'true',
+    title: t('nav.title'),
+  },
+    collapsed
+      ? h(BrandMark, { size: 16 })
+      : h(React.Fragment, null,
+        h('span', { className: 'mydsh-readout-tokens' },
+          today === undefined ? '—' : formatNumber(today) + ' Token'),
+        h('span', { className: 'mydsh-readout-label' }, t('nav.tokensToday')),
+      ),
+  );
+}
+
+/**
+ * Applies the shell appearance patches and renders nothing.
+ *
+ * Seated in `shell.overlay` so it stays mounted for the whole plugin lifetime; see the
+ * mount site for why the settings page was the wrong home for this effect.
+ */
+function ShellPatches() {
+  const { settings } = useSettings();
+  useInterfacePatches(settings);
+  return null;
+}
+
+function UsageOverlay({ ctx }) {  const open = useValue(usageOpen);
 
   React.useEffect(() => {
     if (!open) return undefined;
@@ -127,7 +202,13 @@ function UsageOverlay({ ctx }) {
   );
 }
 
-/** Heading row plus the shared usage panel, so the overlay carries its own close affordance. */
+/**
+ * Heading row plus the shared usage panel.
+ *
+ * The heading is a sibling of the scrolling body, not inside it: when the whole panel
+ * scrolled, the close button drifted up with the content and could be scrolled out of reach.
+ * The frame now stays put and only `.mydsh-usage-body` scrolls.
+ */
 function UsagePanelShell({ onClose }) {
   const t = useT();
   return h(React.Fragment, null,
@@ -137,9 +218,10 @@ function UsagePanelShell({ onClose }) {
         type: 'button',
         className: 'mydsh-btn mydsh-btn-sm',
         onClick: onClose,
+        'aria-label': t('common.close'),
       }, t('common.close')),
     ),
-    h(UsagePanel, null),
+    h('div', { className: 'mydsh-usage-body' }, h(UsagePanel, null)),
   );
 }
 
@@ -195,7 +277,6 @@ function MyDshSettingsPage({ ctx }) {
 function SettingsGate() {
   const t = useT();
   const { settings, loading, error } = useSettings();
-  useInterfacePatches(settings);
 
   if (loading && settings === undefined) {
     return h('div', { className: 'mydsh mydsh-page' },
@@ -509,16 +590,40 @@ export function apply(ctx) {
     }, () => h(BrandMark, { size: 16 })),
   );
 
-  // The plugin's own entry at the sidebar foot, beside Settings. The owner passes
-  // `wide`, which this forwards so the row and rail forms stay in step with the
-  // column instead of being guessed from CSS.
+  // The way in.
+  //
+  // Two registrations are needed and both are load-bearing: `sidebar.panellist` draws the
+  // icon in the left rail, and `main` supplies the page it selects. The slot catalog states
+  // the contract — "Each list id addresses the matching main panel" — so an icon without a
+  // matching main key is a dead button, which is exactly what the first version shipped.
+  //
+  // `dsh-context` is the working precedent in this profile; it registers both under one id
+  // and gates them together.
+  guard('main', () =>
+    mount(ctx, 'main', {
+      name: 'main',
+      key: IDS.settings,
+    }, () => h(Providers, { ctx }, h(MyDshMainPanel, { ctx }))),
+  );
+
+  guard('sidebar.panellist', () =>
+    mount(ctx, 'sidebar.panellist', {
+      name: 'sidebar.panellist',
+      id: IDS.settings,
+      order: 30,
+      label: () => navLabel(ctx),
+    }, () => h(PanelIcon)),
+  );
+
+  // The sidebar foot keeps only the token/price readout — no product name. It is a readout,
+  // not a second way in, so it does not compete with the rail icon for the click.
   guard('sidebar.footer.action', () =>
     mount(ctx, 'sidebar.footer.action', {
       name: 'sidebar.footer.action',
       id: IDS.entry,
       order: 10,
       label: () => navLabel(ctx),
-    }, (props) => h(Providers, { ctx }, h(SidebarEntry, { ctx, wide: props?.wide }))),
+    }, (props) => h(Providers, { ctx }, h(SidebarUsageReadout, { wide: props?.wide }))),
   );
 
   // The agent-family entry when the user places it at the sidebar foot. It shares the
@@ -575,6 +680,21 @@ export function apply(ctx) {
       id: IDS.titlebarEntry,
       order: 80,
     }, () => h(Providers, { ctx }, h(TitlebarEntry, { ctx }))),
+  );
+
+  // Applying the shell patches.
+  //
+  // This lives in `shell.overlay` — not in the settings page — because it must run for as
+  // long as the plugin is loaded. When it lived inside the settings page, closing that page
+  // ran the effect cleanup, which stripped the body attributes and undid every appearance
+  // patch: "hide the new-session button" looked like it worked and then reverted. It renders
+  // nothing; the entry exists only to own the effect.
+  guard('shell.overlay', () =>
+    mount(ctx, 'shell.overlay', {
+      name: 'shell.overlay',
+      id: IDS.patches,
+      order: 10,
+    }, () => h(Providers, { ctx }, h(ShellPatches, null))),
   );
 
   // The cross-session insight page. `shell.overlay` is a list slot with

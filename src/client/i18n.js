@@ -32,6 +32,7 @@ export const EN = 'en';
  */
 const ZH_DICT = {
   'nav.title': '我的DSH',
+  'nav.tokensToday': '今日用量',
   'nav.subtitle': '统一调整界面、查看用量、保护数据、管理失败重试。',
   'common.reload': '重新加载',
   'common.reloadHint': '从 Host 重新读取设置',
@@ -141,6 +142,13 @@ const ZH_DICT = {
   'usage.cacheWrite': '缓存写入',
   'usage.reasoning': '推理',
   'usage.calls': '请求数',
+  'usage.cacheHitRate': '命中率 {p}%',
+  'usage.cacheWriteHint': '本轮写入了缓存',
+  'usage.cacheWriteNone': '未写入缓存',
+  'usage.averagePerCall': '每次约 {n} Token',
+  'usage.averageCostPerCall': '每次约 {v}',
+  'usage.bucketCount': '时间分桶',
+  'usage.bucketHint': '曲线上的数据点',
   'usage.cost': '预估费用',
   'usage.byProvider': '按服务商',
   'usage.byModel': '按模型',
@@ -589,6 +597,7 @@ const ZH_DICT = {
  */
 const EN_DICT = {
   'nav.title': 'My DSH',
+  'nav.tokensToday': 'today',
   'nav.subtitle': 'One place to tune the interface, watch spend, protect your data, and manage retries.',
   'common.reload': 'Reload',
   'common.reloadHint': 'Reload settings from the Host',
@@ -698,6 +707,13 @@ const EN_DICT = {
   'usage.cacheWrite': 'Cache write',
   'usage.reasoning': 'Reasoning',
   'usage.calls': 'Requests',
+  'usage.cacheHitRate': '{p}% hit rate',
+  'usage.cacheWriteHint': 'Cache written this round',
+  'usage.cacheWriteNone': 'No cache writes',
+  'usage.averagePerCall': 'about {n} tokens each',
+  'usage.averageCostPerCall': 'about {v} each',
+  'usage.bucketCount': 'Time buckets',
+  'usage.bucketHint': 'data points on the curve',
   'usage.cost': 'Estimated cost',
   'usage.byProvider': 'By provider',
   'usage.byModel': 'By model',

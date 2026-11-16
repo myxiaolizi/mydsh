@@ -1,18 +1,23 @@
 /**
  * Check that every control the plugin draws actually does something.
  *
- * Two failures shipped that made the plugin look completely broken, and neither was caught
- * by the existing suites because both were "the code runs, it just doesn't work":
+ * The failures this guards all looked identical from the outside — "the plugin is broken" —
+ * and none was caught by a unit test because the code ran fine and simply had no effect:
  *
  *  1. The sidebar entry called `layout.selectPanel('settings')`. That method takes a
- *     registered *main* panel key and throws for anything else; the surrounding try/catch —
- *     added to keep a click handler from throwing — swallowed the error, so the button
- *     looked dead. Clicking it must open something the plugin owns.
- *  2. `display.entry` offers four values but only `sidebar` was implemented, so `titlebar`
- *     and `settings` left the plugin with no entry anywhere at all.
+ *     registered *main* panel key and throws for anything else; the try/catch added to keep a
+ *     click handler safe swallowed the error, so the button looked dead.
+ *  2. `display.entry` offers four values but only `sidebar` was implemented.
+ *  3. `conversation.header.leading` is a `single` slot, so an optional control claiming it
+ *     displaced anything else that wanted the seat.
+ *  4. The shell appearance patches were applied from inside the settings page, so closing the
+ *     page ran the effect cleanup and silently reverted every one of them.
+ *  5. `contextInsight` shipped as a setting with a label and no consumer.
+ *  6. The rail icon and its `main` panel are two registrations that must share one id.
  *
- * These assertions read the source because both bugs are present in the *shape* of the code
- * (a swallowed call, a missing branch) rather than in a value a unit test could observe.
+ * These read the source because each bug lives in the *shape* of the code — a swallowed
+ * call, a missing branch, a wrong slot kind — rather than in a value a unit test could
+ * observe at runtime.
  */
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -24,6 +29,9 @@ const client = await readFile(join(ROOT, 'src/client/index.js'), 'utf8');
 const host = await readFile(join(ROOT, 'lib/index.js'), 'utf8');
 const settingsPage = await readFile(join(ROOT, 'src/client/settings-page.js'), 'utf8');
 const store = await readFile(join(ROOT, 'src/client/store.js'), 'utf8');
+const patches = await readFile(join(ROOT, 'src/client/interface-patches.js'), 'utf8');
+const usagePanel = await readFile(join(ROOT, 'src/client/panel-usage.js'), 'utf8');
+const theme = await readFile(join(ROOT, 'src/client/theme.js'), 'utf8');
 
 let failures = 0;
 const check = (name, fn) => {
@@ -36,36 +44,24 @@ const check = (name, fn) => {
   }
 };
 
+/** Strip comments so an assertion about code cannot match the prose that explains it. */
+const code = (source) => source
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+  .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+
 check('entry: the sidebar button opens a surface the plugin owns', () => {
-  // The old handler was `layout.selectPanel('settings')` inside a try/catch. `selectPanel`
-  // rejects an unregistered main key, and the catch hid it, so nothing visible happened.
-  // The explanatory comment above the replacement names that call, so strip comments first
-  // and assert against code only.
-  const codeOnly = client
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+  // `selectPanel` rejects an unregistered main key, and the catch hid it.
   assert.doesNotMatch(
-    codeOnly,
+    code(client),
     /selectPanel\(\s*'settings'\s*\)/,
     'selectPanel takes a main panel key; "settings" is not one, so the call always threw',
   );
-  assert.match(
-    client,
-    /const open = \(\) => usageOpen\.set\(true\)/,
-    'the entry must open the plugin\'s own panel',
-  );
+  assert.match(client, /usageOpen\.set\(true\)/, "the entry must open the plugin's own panel");
   assert.match(store, /export const usageOpen = createStore\(false\)/, 'that panel needs its own open state');
-  assert.match(
-    client,
-    /function UsageOverlay\(/,
-    'and a component to render it',
-  );
+  assert.match(client, /function UsageOverlay\(/, 'and a component to render it');
 });
 
 check('entry: a click handler never hides its own failure', () => {
-  // The specific pattern that caused the dead button: a try/catch around the only statement,
-  // with no reporting. A handler may guard, but a silent guard on the *only* effect turns a
-  // bug into an invisible one.
   const handler = client.slice(client.indexOf('function PluginEntryButton'));
   const body = handler.slice(0, handler.indexOf('\n}'));
   assert.doesNotMatch(
@@ -76,49 +72,70 @@ check('entry: a click handler never hides its own failure', () => {
 });
 
 check('entry: every placement value has an implementation', () => {
-  // `display.entry` accepts sidebar / settings / titlebar / hidden. `settings` needs no
-  // entry of its own (the section is always registered), `hidden` means none, so the two
-  // that must be built are sidebar and titlebar.
   assert.match(client, /display\.entry !== 'sidebar'/, 'the sidebar form must be gated on the placement');
   assert.match(client, /display\.entry !== 'titlebar'/, 'the titlebar form must be gated on the placement');
-  assert.match(
-    client,
-    /h\(TitlebarEntry, \{ ctx \}\)/,
-    'the titlebar form must actually be mounted, not merely defined',
-  );
-  assert.match(
-    client,
-    /id: IDS\.titlebarEntry/,
-    'and mounted under its own id so it does not collide with the account chip',
-  );
+  assert.match(client, /h\(TitlebarEntry, \{ ctx \}\)/, 'the titlebar form must be mounted, not merely defined');
+  assert.match(client, /id: IDS\.titlebarEntry/, 'and mounted under its own id');
+});
+
+check('entry: the rail icon and its panel are registered together', () => {
+  // `sidebar.panellist` draws the icon and `main` supplies the page it selects; the catalog
+  // contract is "each list id addresses the matching main panel". An icon without a matching
+  // main key is a dead button.
+  assert.match(client, /mount\(ctx, 'main'/, 'the main panel must be registered');
+  assert.match(client, /mount\(ctx, 'sidebar\.panellist'/, 'and the rail icon beside it');
+
+  const mainKey = client.match(/mount\(ctx, 'main', \{[\s\S]{0,200}?key: (IDS\.[a-zA-Z]+)/);
+  const iconId = client.match(/mount\(ctx, 'sidebar\.panellist', \{[\s\S]{0,200}?id: (IDS\.[a-zA-Z]+)/);
+  assert.ok(mainKey, 'the main registration needs a key');
+  assert.ok(iconId, 'the icon registration needs an id');
+  assert.equal(mainKey[1], iconId[1], 'the icon id and the main key must be the same identifier');
+});
+
+check('entry: the sidebar foot is a readout, not a second way in', () => {
+  // The product name belongs on the rail icon; the foot shows figures only.
+  assert.match(client, /function SidebarUsageReadout\(/, 'the readout must exist');
+  const readout = client.slice(client.indexOf('function SidebarUsageReadout'));
+  const body = readout.slice(0, readout.indexOf('\n}\n'));
+  assert.match(body, /mydsh-readout-tokens/, 'the token figure must be rendered');
+  assert.ok(!body.includes('mydsh-entry-label'), 'the foot row must not print the product name');
 });
 
 check('overlays: every panel opens over the shell rather than navigating away', () => {
-  // `main` is keyed by sidebar entry id and carries the conversation; occupying it would
-  // displace the native UI. `shell.overlay` is the additive layer.
-  for (const id of ['IDS.usage', 'IDS.insight', 'IDS.fleet']) {
+  // `main` is keyed by sidebar entry id and carries the conversation; `shell.overlay` is the
+  // additive floating layer that never displaces native UI.
+  for (const id of ['IDS.usage', 'IDS.insight', 'IDS.fleet', 'IDS.patches']) {
     assert.ok(client.includes(id), `${id} must be registered`);
   }
   const overlayMounts = client.match(/mount\(ctx, 'shell\.overlay'/g) ?? [];
-  assert.equal(overlayMounts.length, 3, 'all three overlays belong to the floating layer');
+  assert.equal(overlayMounts.length, 4, 'the three panels plus the headless patch applier');
+});
+
+check('overlays: the close control does not scroll with the content', () => {
+  // The heading sat inside the scrolling frame, so the close button drifted away with the
+  // content and could be scrolled out of reach.
+  assert.match(client, /className: 'mydsh-usage-body'/, 'the body must be its own scroll region');
+  const marker = `.${'${ROOT}'}-usage-panel {`;
+  const panel = theme.slice(theme.indexOf(marker));
+  assert.ok(panel.length > 0, 'the panel rule must exist');
+  const panelBody = panel.slice(0, panel.indexOf('\n}'));
+  assert.match(panelBody, /overflow: hidden/, 'the frame must not scroll');
+  assert.match(panelBody, /flex-direction: column/, 'the frame is a column: heading then body');
 });
 
 check('slots: a single seat is never claimed by a feature that may not draw', () => {
   // `conversation.header.leading` is `single`: registering takes the seat outright, even if
-  // the component returns null. Both the account chip and the titlebar entry tried to use
-  // it, so one silently displaced the other and the seat was held while switched off. Both
-  // belong in `conversation.session.header.utilities`, which is a list.
+  // the component returns null. Both the account chip and the titlebar entry tried to use it,
+  // so one displaced the other and the seat was held while the feature was switched off.
   assert.doesNotMatch(
-    client,
+    code(client),
     /mount\(ctx, 'conversation\.header\.leading'/,
     'a single slot must not be claimed by an optional control',
   );
   const utilities = client.match(/mount\(ctx, 'conversation\.session\.header\.utilities'/g) ?? [];
   assert.equal(utilities.length, 2, 'the account chip and the titlebar entry share the list seat');
 
-  // Their orders must differ, or both would land on the same position and the chip's
-  // leading placement would be a coin flip.
-  const orders = [...client.matchAll(/id: IDS\.(account|titlebarEntry),\s*\n\s*(?:\/\/[^\n]*\n\s*)*order: (\d+)/g)];
+  const orders = [...client.matchAll(/id: IDS\.(account|titlebarEntry),[\s\S]{0,120}?order: (\d+)/g)];
   const seen = new Set();
   for (const match of orders) {
     assert.ok(!seen.has(match[2]), `two header controls share order ${match[2]}`);
@@ -126,9 +143,27 @@ check('slots: a single seat is never claimed by a feature that may not draw', ()
   }
 });
 
+check('patches: shell appearance outlives the settings page being closed', () => {
+  // The effect used to live in the settings page, so closing it ran the cleanup, stripped the
+  // body attributes, and silently undid every appearance patch.
+  assert.match(
+    client,
+    /function ShellPatches\(\)[\s\S]{0,140}useInterfacePatches\(settings\)/,
+    'a headless component must own the effect',
+  );
+  assert.match(client, /id: IDS\.patches/, 'and it must be mounted in shell.overlay');
+
+  // Apply and unload are separate effects: a cleanup bound to [settings] re-runs on every
+  // change, which is precisely the bug.
+  const hook = patches.slice(patches.indexOf('export function useInterfacePatches'));
+  const body = hook.slice(0, hook.indexOf('\n}'));
+  assert.equal((body.match(/React\.useEffect/g) ?? []).length, 2, 'apply and unload are separate effects');
+  assert.match(body, /\}, \[settings\]\)/, 'the apply effect tracks the settings snapshot');
+  assert.match(body, /\}, \[\]\)/, 'the unload effect runs once');
+});
+
 check('settings: an unreachable configuration can be repaired from the page', () => {
-  // With every module off there is no tab whose controls could switch them back on. The
-  // page must not render an empty shell in that state.
+  // With every module off there is no tab whose controls could switch them back on.
   assert.match(
     settingsPage,
     /Panel === undefined[\s\S]{0,400}?RecoverDefaults/,
@@ -139,7 +174,6 @@ check('settings: an unreachable configuration can be repaired from the page', ()
     /const RESTORE_SECTIONS = \['display', 'interface', 'usage', 'toolbox'\]/,
     'recovery must cover exactly the sections that decide reachability',
   );
-  // Recovery must not wipe unrelated configuration.
   assert.match(
     settingsPage,
     /for \(const key of \['entry', 'usagePlacement', 'fleetPlacement'\]\)/,
@@ -157,5 +191,29 @@ check('health: the unreachable posture is reported, not left implicit', () => {
   assert.match(host, /posture: await posture\(\)/, 'and be included in the health payload');
 });
 
-console.log(`\nwiring: ${7 - failures}/7 passed`);
+check('usage: the context insight toggle is actually read', () => {
+  // `contextInsight` shipped as a setting with a label and no consumer, so switching it off
+  // changed nothing.
+  assert.match(
+    usagePanel,
+    /contextInsight === true \? h\(ContextCard/,
+    'the card must be gated on the stored switch',
+  );
+  assert.match(usagePanel, /function ContextCard\(/, 'and the card must exist');
+});
+
+check('usage: the overview states every figure the aggregate carries', () => {
+  // Four cards left cache, reasoning, and the derived averages unstated.
+  const overview = usagePanel.slice(usagePanel.indexOf('function Overview'));
+  const body = overview.slice(0, overview.indexOf('\n}\n'));
+  for (const key of [
+    'usage.totalTokens', 'usage.cost', 'usage.input', 'usage.output',
+    'usage.cacheRead', 'usage.cacheWrite', 'usage.calls',
+  ]) {
+    assert.ok(body.includes(key), `${key} needs a card`);
+  }
+  assert.ok((body.match(/h\(Stat,/g) ?? []).length >= 8, 'at least eight figures');
+});
+
+console.log(`\nwiring: ${14 - failures}/14 passed`);
 process.exit(failures === 0 ? 0 : 1);

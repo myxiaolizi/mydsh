@@ -92,6 +92,27 @@ check('agents: the page never caches the family', () => {
   );
 });
 
+check('agents: the walk is cached and shared, not repeated per open', () => {
+  // Each descendant costs one catalog read that decompresses a session log; a nine-child
+  // family measured ~6 s. Without this the page pays that on every open.
+  assert.match(host, /const AGENT_TREE_TTL = \d/, 'the walk needs an explicit TTL');
+  assert.match(
+    host,
+    /agentTreeInFlight\.get\(rootId\)/,
+    'concurrent opens must share one traversal instead of starting a second',
+  );
+  assert.match(
+    host,
+    /while \(agentTreeCache\.size > AGENT_TREE_CACHE_LIMIT\)/,
+    'the cache needs a cap, or a long-lived process grows one entry per session',
+  );
+  assert.match(
+    host,
+    /finally \{[\s\S]{0,160}?agentTreeInFlight\.delete\(rootId\)/,
+    'the in-flight entry must be released on every path, including failure',
+  );
+});
+
 check('agents: the page tolerates a missing subject', () => {
   assert.match(
     page,
@@ -105,5 +126,5 @@ check('agents: the page tolerates a missing subject', () => {
   );
 });
 
-console.log(`\nagent family: ${5 - failures}/5 passed`);
+console.log(`\nagent family: ${6 - failures}/6 passed`);
 process.exit(failures === 0 ? 0 : 1);

@@ -16,6 +16,7 @@ const SUITES = [
   { name: 'repo targets', script: 'test-repo.mjs' },
   { name: 'format rules', script: 'test-format.mjs' },
   { name: 'pricing', script: 'test-pricing.mjs' },
+  { name: 'session titles', script: 'test-session-titles.mjs' },
   { name: 'i18n', script: 'test-i18n.mjs' },
   { name: 'host units', script: 'test-host.mjs' },
   { name: 'usage index', script: 'test-usage.mjs' },

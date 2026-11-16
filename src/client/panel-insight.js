@@ -110,7 +110,9 @@ export function InsightPage({ onClose }) {
   const locale = useLocale();
   const [sort, setSort] = React.useState('cost');
   const [query, setQuery] = React.useState('');
-  const [limit] = React.useState(200);
+  // Ask for more rows than are drawn so search and sorting have something to work with,
+  // but not so many that the Host has to read tens of session logs to label them.
+  const [limit] = React.useState(120);
 
   const sessions = useAsync(() => api.usageSessions(limit), [limit]);
 

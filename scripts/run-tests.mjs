@@ -28,6 +28,7 @@ const SUITES = [
   { name: 'tunnel protocol', script: 'test-tunnel.mjs' },
   { name: 'auto-continue', script: 'test-auto-continue.mjs' },
   { name: 'control wiring', script: 'test-wiring.mjs' },
+  { name: 'display effects', script: 'test-display-effects.mjs' },
   { name: '7z', script: 'test-7z.mjs' },
   { name: 'backup e2e', script: 'test-backup-e2e.mjs' },
 ];

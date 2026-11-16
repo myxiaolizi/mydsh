@@ -231,8 +231,12 @@ export function UsagePanel() {
     ) : null,
   );
 }
-
-function Overview({ data }) {
+/**
+ * The summary cards. Exported so the render harness can drive it with a real payload: the
+ * panel itself fetches asynchronously, so a static renderer only ever reaches the settings
+ * rows.
+ */
+export function Overview({ data }) {
   const t = usePanelT();
   const totals = data?.totals ?? {};
   // Every figure the aggregate carries gets a card. The panel previously showed four and

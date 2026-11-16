@@ -138,7 +138,13 @@ function SidebarUsageReadout({ wide }) {
   const t = useT();
   const display = settings?.display ?? {};
   if (display.enabled !== true) return null;
-  if (display.entry === 'hidden') return null;
+  // `usagePlacement` decides where the numbers appear. It was declared with four options and
+  // read nowhere, so choosing a position changed nothing. `sidebar` is the default seat; the
+  // other three are handled by their own hosts (the titlebar chip and the main panel), and
+  // `off` hides the readout entirely.
+  if (display.usagePlacement === 'off') return null;
+  if (display.usagePlacement === 'titlebar') return null;
+  if (display.usagePlacement !== 'sidebar' && display.usagePlacement !== 'panel') return null;
 
   const show = display.sidebarBadge === true;
   const today = useTodayTokens(show);

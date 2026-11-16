@@ -1019,6 +1019,145 @@ export const STYLES = `
 
 /* Rail icon for the plugin's own main panel. The slot owner supplies the edge and the
    selected state, so this only supplies centring and the selected tint. */
+/* ── dashboard ────────────────────────────────────────────────────────────── 
+   The landing page. It is a reading surface, not a form, so it gets a wider rhythm than 
+   the settings panels and a two-column split that collapses on narrow frames. */
+.${ROOT}-dashboard {
+  gap: var(--mydsh-space-3);
+}
+
+.${ROOT}-dash-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--mydsh-space-3);
+  flex-wrap: wrap;
+}
+
+.${ROOT}-dash-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+  color: var(--mydsh-text);
+}
+
+.${ROOT}-dash-sub {
+  margin: 2px 0 0;
+  font-size: var(--mydsh-font-sm);
+  color: var(--mydsh-text-muted);
+}
+
+/* Two-up on a wide frame, stacked below it. minmax(0, 1fr) keeps a long session title 
+   from forcing the column wider than its share. */
+.${ROOT}-dash-split {
+  display: grid;
+  gap: var(--mydsh-space-3);
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  align-items: start;
+}
+
+.${ROOT}-dash-mini {
+  display: flex;
+  gap: var(--mydsh-space-4);
+  flex-wrap: wrap;
+  font-size: var(--mydsh-font-sm);
+  color: var(--mydsh-text-muted);
+}
+
+.${ROOT}-dash-mini strong {
+  color: var(--mydsh-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.${ROOT}-dash-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.${ROOT}-dash-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mydsh-space-3);
+}
+
+.${ROOT}-dash-row-main {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.${ROOT}-dash-row-title {
+  font-size: var(--mydsh-font-sm);
+  color: var(--mydsh-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.${ROOT}-dash-row-bar {
+  height: 3px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--mydsh-text-muted) 18%, transparent);
+  overflow: hidden;
+}
+
+.${ROOT}-dash-row-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--mydsh-accent);
+}
+
+.${ROOT}-dash-row-meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: var(--mydsh-font-xs);
+  color: var(--mydsh-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.${ROOT}-dash-row-cost {
+  flex: 0 0 auto;
+  font-size: var(--mydsh-font-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--mydsh-text);
+}
+
+.${ROOT}-dash-context {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mydsh-space-2);
+}
+
+.${ROOT}-dash-context-value {
+  font-size: 22px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--mydsh-text);
+}
+
+.${ROOT}-dash-wallets {
+  display: flex;
+  gap: var(--mydsh-space-4);
+  flex-wrap: wrap;
+}
+
+.${ROOT}-dash-wallet {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.${ROOT}-dash-wallet-value {
+  font-size: var(--mydsh-font-lg);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
 .${ROOT}-panel-icon {
   display: inline-flex;
   align-items: center;

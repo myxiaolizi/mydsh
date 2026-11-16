@@ -29,6 +29,9 @@ const h = React.createElement;
  * because it is where modules get switched on).
  */
 export const TABS = [
+  // The dashboard is first so the plugin opens on figures rather than on a configuration
+  // screen; `active` falls back to visible[0], which makes this the landing tab.
+  { id: 'dashboard', labelKey: 'tab.dashboard', icon: 'chart', section: 'usage' },
   { id: 'display', labelKey: 'tab.display', icon: 'settings', section: null },
   { id: 'interface', labelKey: 'tab.interface', icon: 'palette', section: 'interface' },
   { id: 'usage', labelKey: 'tab.usage', icon: 'chart', section: 'usage' },

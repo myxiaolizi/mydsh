@@ -32,6 +32,7 @@ const store = await readFile(join(ROOT, 'src/client/store.js'), 'utf8');
 const patches = await readFile(join(ROOT, 'src/client/interface-patches.js'), 'utf8');
 const usagePanel = await readFile(join(ROOT, 'src/client/panel-usage.js'), 'utf8');
 const theme = await readFile(join(ROOT, 'src/client/theme.js'), 'utf8');
+const dashboard = await readFile(join(ROOT, 'src/client/panel-dashboard.js'), 'utf8');
 
 let failures = 0;
 const check = (name, fn) => {
@@ -215,5 +216,28 @@ check('usage: the overview states every figure the aggregate carries', () => {
   assert.ok((body.match(/h\(Stat,/g) ?? []).length >= 8, 'at least eight figures');
 });
 
-console.log(`\nwiring: ${14 - failures}/14 passed`);
+check('dashboard: the plugin opens on data, not on a settings form', () => {
+  // `active` falls back to `visible[0]`, so the first tab is the landing page. It must be the
+  // dashboard: opening on "where things go" shows a configuration screen to someone who just
+  // wanted to know what they spent.
+  const tabs = settingsPage.slice(settingsPage.indexOf('export const TABS'));
+  // Read the first entry directly: slicing to the first ']' breaks on the comment above it,
+  // which contains 'visible[0]'.
+  const firstId = tabs.match(/\{ id: '([a-z]+)'/);
+  assert.ok(firstId, 'the tab list must start with an entry');
+  assert.equal(firstId[1], 'dashboard', 'the dashboard must be the first tab so it is the landing page');
+
+  // And it must actually be bound to a component, or the landing page is blank.
+  assert.match(client, /dashboard: Dashboard,/, 'the dashboard tab needs a panel');
+  assert.ok("import { Dashboard } from './panel-dashboard.js'" .length > 0 && client.includes("from './panel-dashboard.js'"), 'and the import that provides it');
+});
+
+check('dashboard: it never displays a zero it has not measured', () => {
+  // The first paint has no payload. Rendering `totals.cost ?? 0` there claims "you spent
+  // nothing" for as long as the request takes, and forever if it failed.
+  assert.match(dashboard, /const settling = usage\.loading === true/, 'a not-yet-loaded state must be distinguished');
+  assert.match(dashboard, /settling[\s\S]{0,120}?common\.loading/, 'and shown as loading rather than as zeros');
+  assert.match(dashboard, /usage\.error !== undefined/, 'a failed read must surface, not render as zero');
+});
+console.log(`\nwiring: ${16 - failures}/16 passed`);
 process.exit(failures === 0 ? 0 : 1);

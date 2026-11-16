@@ -167,6 +167,11 @@ export const api = {
   toolbox: () => read('/toolbox', { ttlMs: 0 }),
   toolboxMcp: () => read('/toolbox/mcp', { ttlMs: 0 }),
   toolboxPlugins: () => read('/toolbox/plugins', { ttlMs: 0 }),
+  // Memory is user-editable content, so it is read on demand and written through two actions
+  // rather than a generic settings patch.
+  toolboxMemory: () => read('/toolbox/memory', { ttlMs: 0 }),
+  memoryAdd: (text, tags) => write('/toolbox/memory', { action: 'add', text, tags }),
+  memoryRemove: (query) => write('/toolbox/memory', { action: 'remove', query }),
 
   health: () => read('/system/health', { ttlMs: 0 }),
 };

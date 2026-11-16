@@ -29,3 +29,8 @@ tmp/
 .env
 .env.local
 *.local.env
+
+# Local secrets, kept out of the repository by name as well as by location. A push token
+# once sat in a shell command in a session log and GitHub revoked it on detection, so the
+# token lives in this directory with an ignore rule rather than in any tracked file.
+secrets/

@@ -53,6 +53,9 @@ const RANGES = [
   { value: '7d', labelKey: 'usage.7d' },
   { value: '30d', labelKey: 'usage.30d' },
   { value: '90d', labelKey: 'usage.90d' },
+  // The history here runs well past 90 days, so without this there was no way to see the
+  // real total — the last preset still covered only a fraction of it.
+  { value: 'all', labelKey: 'usage.all' },
 ];
 
 /** Grouping dimensions offered by the Host aggregate. */

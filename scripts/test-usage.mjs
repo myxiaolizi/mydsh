@@ -108,6 +108,24 @@ await check('usage: a bucket override gives the heatmap one cell per day', async
   assert.equal(resolveRange({ kind: 'today', bucket: 'hour' }).bucketMs, 3_600_000);
 });
 
+check('usage: the "all" preset really means all history', () => {
+  // An unknown preset falls back to `7d`, which is how "all" silently reported a seventh
+  // of the history with a plausible-looking total. `all` must resolve to the epoch.
+  assert.equal(resolveRange({ kind: 'all' }).from, 0, '"all" must start at the epoch');
+  assert.equal(resolveRange({ kind: 'all' }).label, 'all');
+
+  // The fallback is still the documented behaviour for a junk preset, so a caller that
+  // invents a name gets a bounded window rather than the whole corpus by accident.
+  assert.equal(resolveRange({ kind: 'no-such-range' }).label, '7d');
+
+  // And the real corpus spans far more than 7 days, which is what made the difference
+  // visible: "all" must cover at least as much as the widest named preset.
+  assert.ok(
+    resolveRange({ kind: 'all' }).from < resolveRange({ kind: '90d' }).from,
+    '"all" must reach further back than 90 days',
+  );
+});
+
 await check('usage: the first refresh reads every session exactly once', async () => {
   const { root, home } = await makeHome([1, 2, 3]);
   try {

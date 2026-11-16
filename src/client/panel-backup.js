@@ -99,6 +99,14 @@ export function BackupPanel() {
 
   const selectedCount = ITEMS.filter((item) => items[item.key] === true).length;
 
+  // Destinations the Host reports as incomplete. Kept separate from `destinations` because the
+  // stored list is what the settings form edits, while this is what the Host says it can
+  // actually use.
+  const destinationGaps = (status.data?.destinationHealth ?? []).filter((entry) => entry.ready !== true);
+  // Nothing to write to means the run cannot succeed, so the button says so instead of
+  // starting an archive that has nowhere to go.
+  const canRun = selectedCount > 0 && destinations.length > 0 && destinationGaps.length === 0;
+
   const runNow = async () => {
     setRunning(true);
     setResult(undefined);
@@ -151,7 +159,7 @@ export function BackupPanel() {
           h('button', {
             type: 'button',
             className: 'mydsh-btn mydsh-btn-primary',
-            disabled: running || selectedCount === 0 || destinations.length === 0,
+            disabled: running || !canRun,
             onClick: runNow,
           }, running ? t('backup.running') : t('backup.run')),
         ),
@@ -163,6 +171,18 @@ export function BackupPanel() {
           : h('p', { className: 'mydsh-hint' }, t('backup.noRunsYet')),
         selectedCount === 0 ? h('p', { className: 'mydsh-notice' }, t('backup.noticeNone')) : null,
         destinations.length === 0 ? h('p', { className: 'mydsh-notice' }, t('backup.noticeNoDestination')) : null,
+        // A destination that exists but is missing its required fields is the failure a user
+        // actually hits: the run builds the whole archive and only then reports an opaque
+        // reason. Naming the gap before the button is pressed is the difference between a
+        // fixable configuration and a broken feature.
+        destinationGaps.length > 0
+          ? h('p', { className: 'mydsh-notice' },
+            t('backup.noticeIncomplete', {
+              detail: destinationGaps
+                .map((gap) => `${kindLabel(t, gap.kind)} — ${gap.missing.map((key) => t(`backup.field.${key}`)).join(', ')}`)
+                .join('; '),
+            }))
+          : null,
       ),
 
       // ── history ──────────────────────────────────────────────────────────

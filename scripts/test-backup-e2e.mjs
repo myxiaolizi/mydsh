@@ -254,5 +254,56 @@ const failed = results.filter((result) => !result.ok);
 for (const result of results) {
   console.log(`${result.ok ? 'PASS' : 'FAIL'}  ${result.name}${result.ok ? '' : `\n        ${result.error}`}`);
 }
+await check('e2e: an incomplete destination is named before the archive is built', async () => {
+  const { home, root } = await makeHome();
+  try {
+    const { BackupEngine } = await import('../lib/host/backup/engine.js');
+    const { createSources } = await import('../lib/host/backup/sources.js');
+
+    // The user's real failure: a WebDAV destination saved without its URL. The run used to
+    // build the entire archive and then report `webdav:no-url`, which says nothing about what
+    // to fill in. It must now name the missing field.
+    const engine = new BackupEngine({
+      settings: settingsStub({
+        enabled: true,
+        items: { conversations: true },
+        destinations: [{ kind: 'webdav', url: '', directory: 'mydsh', enabled: true }],
+        archive: { format: 'zip' },
+        triggers: {},
+      }),
+      sources: createSources({ dshHome: home, profileName: 'desktop', logger: () => {} }),
+      logger: () => () => {},
+      secrets: { forDestination: async () => ({}), get: async () => undefined },
+      state: {},
+    });
+
+    const result = await engine.run({ trigger: 'manual' });
+    assert.equal(result.ok, false);
+    assert.match(result.error, /server-url/i, 'the error must name the missing field');
+    assert.match(result.error, /not configured/i);
+    // The upload step must record which destination was short and why.
+    const upload = result.record.steps.find((step) => step.name === 'upload');
+    assert.ok(upload, 'the upload step must be recorded');
+    const failed = upload.detail.find((entry) => entry.ok === false);
+    assert.equal(failed.reason, 'incomplete');
+    assert.deepEqual(failed.missing, ['url']);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+await check('e2e: destination readiness is reported without running a backup', async () => {
+  const { missingDestinationFields } = await import('../lib/host/backup/destinations.js');
+  // The panel reads this to disable the run button instead of letting a user start an archive
+  // that has nowhere to go.
+  assert.deepEqual(missingDestinationFields({ kind: 'webdav' }).map((f) => f.key), ['url']);
+  assert.deepEqual(missingDestinationFields({ kind: 'webdav', url: 'https://x/y' }), []);
+  assert.deepEqual(missingDestinationFields({ kind: 'local' }).map((f) => f.key), ['directory']);
+  assert.deepEqual(missingDestinationFields({ kind: 'local', directory: 'D:/b' }), []);
+  assert.deepEqual(missingDestinationFields({ kind: 'oss', bucket: 'b' }).map((f) => f.key), ['endpoint']);
+  // A typo in `kind` must not silently fall through to the local destination.
+  assert.deepEqual(missingDestinationFields({ kind: 'typo' }).map((f) => f.key), ['kind']);
+});
+
 console.log(`\nbackup e2e: ${results.length - failed.length}/${results.length} passed`);
 process.exit(failed.length === 0 ? 0 : 1);

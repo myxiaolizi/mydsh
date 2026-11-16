@@ -103,6 +103,29 @@ check('overlays: every panel opens over the shell rather than navigating away', 
   assert.equal(overlayMounts.length, 3, 'all three overlays belong to the floating layer');
 });
 
+check('slots: a single seat is never claimed by a feature that may not draw', () => {
+  // `conversation.header.leading` is `single`: registering takes the seat outright, even if
+  // the component returns null. Both the account chip and the titlebar entry tried to use
+  // it, so one silently displaced the other and the seat was held while switched off. Both
+  // belong in `conversation.session.header.utilities`, which is a list.
+  assert.doesNotMatch(
+    client,
+    /mount\(ctx, 'conversation\.header\.leading'/,
+    'a single slot must not be claimed by an optional control',
+  );
+  const utilities = client.match(/mount\(ctx, 'conversation\.session\.header\.utilities'/g) ?? [];
+  assert.equal(utilities.length, 2, 'the account chip and the titlebar entry share the list seat');
+
+  // Their orders must differ, or both would land on the same position and the chip's
+  // leading placement would be a coin flip.
+  const orders = [...client.matchAll(/id: IDS\.(account|titlebarEntry),\s*\n\s*(?:\/\/[^\n]*\n\s*)*order: (\d+)/g)];
+  const seen = new Set();
+  for (const match of orders) {
+    assert.ok(!seen.has(match[2]), `two header controls share order ${match[2]}`);
+    seen.add(match[2]);
+  }
+});
+
 check('settings: an unreachable configuration can be repaired from the page', () => {
   // With every module off there is no tab whose controls could switch them back on. The
   // page must not render an empty shell in that state.
@@ -134,5 +157,5 @@ check('health: the unreachable posture is reported, not left implicit', () => {
   assert.match(host, /posture: await posture\(\)/, 'and be included in the health payload');
 });
 
-console.log(`\nwiring: ${6 - failures}/6 passed`);
+console.log(`\nwiring: ${7 - failures}/7 passed`);
 process.exit(failures === 0 ? 0 : 1);

@@ -548,24 +548,32 @@ export function apply(ctx) {
     }, () => h(Providers, { ctx }, h(BrandNameSlot, null))),
   );
 
-  // Titlebar account chip. `conversation.header.leading` is unoccupied and carries
-  // no shadowing risk, unlike `shell.leading`.
-  guard('conversation.header.leading', () =>
-    mount(ctx, 'conversation.header.leading', {
-      name: 'conversation.header.leading',
+  // Titlebar account chip.
+  //
+  // `conversation.header.leading` is a `single` slot: whoever registers takes the seat
+  // outright, whether or not it renders anything. Claiming it unconditionally blocked the
+  // titlebar entry from sitting beside it and held the seat even with the feature switched
+  // off, so the chip goes to the header's `utilities` list instead — the seat built for
+  // more than one occupant. `AccountSlot` still decides for itself whether to draw.
+  guard('conversation.session.header.utilities', () =>
+    mount(ctx, 'conversation.session.header.utilities', {
+      name: 'conversation.session.header.utilities',
       id: IDS.account,
-      order: 10,
+      // Ahead of the titlebar entry so the chip keeps its usual leading position.
+      order: 70,
     }, () => h(Providers, { ctx }, h(AccountSlot, { ctx }))),
   );
 
-  // The plugin entry when the user places it in the titlebar. Without this, choosing
-  // `titlebar` in `display.entry` left the plugin with no entry anywhere.
-  guard('conversation.header.leading', () =>
-    mount(ctx, 'conversation.header.leading', {
-      name: 'conversation.header.leading',
+  // The plugin entry when the user places it in the titlebar.
+  //
+  // `conversation.header.leading` is a `single` slot, so registering here would *replace*
+  // the account chip rather than sit beside it; `conversation.session.header.utilities` is
+  // a `list`, which is the seat that allows more than one occupant.
+  guard('conversation.session.header.utilities', () =>
+    mount(ctx, 'conversation.session.header.utilities', {
+      name: 'conversation.session.header.utilities',
       id: IDS.titlebarEntry,
-      // After the account chip, so the chip keeps its usual left-most position.
-      order: 20,
+      order: 80,
     }, () => h(Providers, { ctx }, h(TitlebarEntry, { ctx }))),
   );
 

@@ -10,6 +10,7 @@
  * they are: translating them would make the figures harder to compare, not easier.
  */
 import React from 'react';
+import { insightOpen } from './store.js';
 import {
   AreaChart,
   BarList,
@@ -203,6 +204,19 @@ export function UsagePanel() {
         h(ContextCard, null),
       ),
 
+      // The way into the cross-session page. It gets its own small card rather than a
+      // link buried in one of the charts, because the page answers a different question
+      // from everything above it.
+      h(Card, {
+        title: t('insight.title'),
+        description: t('insight.entryHint'),
+        actions: h('button', {
+          type: 'button',
+          className: 'mydsh-btn mydsh-btn-sm',
+          onClick: () => insightOpen.set(true),
+        }, t('insight.open')),
+      }),
+
       h(BalanceCard, null),
       h(BudgetCard, null),
       h(SessionsCard, null),
@@ -286,7 +300,7 @@ function ContextCard() {
           ),
           h('p', { className: 'mydsh-hint' },
             data.lastTime > 0
-              ? t('usage.lastRequestAt', { when: formatRelative(data.lastTime) })
+              ? t('usage.lastRequestAt', { when: formatRelative(data.lastTime, Date.now(), t) })
               : t('usage.noRequestYet'),
           ),
         ),
@@ -524,7 +538,7 @@ function SessionsCard() {
                   h('td', { className: 'num' }, formatNumber(row.total)),
                   h('td', { className: 'num' }, formatNumber(row.calls)),
                   h('td', { className: 'num' }, formatMoney(row.cost)),
-                  h('td', { className: 'mydsh-hint' }, formatRelative(row.lastTime)),
+                  h('td', { className: 'mydsh-hint' }, formatRelative(row.lastTime, Date.now(), t)),
                 ),
               ),
             ),

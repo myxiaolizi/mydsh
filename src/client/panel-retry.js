@@ -207,7 +207,7 @@ export function RetryPanel() {
               h('tbody', null,
                 status.data.recent.map((entry, index) =>
                   h('tr', { key: index },
-                    h('td', { className: 'mydsh-hint' }, formatRelative(entry.at)),
+                    h('td', { className: 'mydsh-hint' }, formatRelative(entry.at, Date.now(), t)),
                     h('td', null, h(Badge, null, kindLabel(t, entry.kind))),
                     h('td', { className: 'num' }, entry.attempt ?? '—'),
                     h('td', null,

@@ -489,6 +489,38 @@ const ZH_DICT = {
   'toolbox.columnEnabled': '已启用',
   'toolbox.statusConnected': '已连接',
   'toolbox.statusUnknown': '未知',
+
+  // Relative time. `format.js` takes these as a translate function so the units follow
+  // the active language instead of leaking English into a Chinese UI.
+  'time.justNow': '刚刚',
+  'time.minutes': '{count} 分钟前',
+  'time.hours': '{count} 小时前',
+  'time.days': '{count} 天前',
+
+  // Cross-session insight page. It ranks every session the Host returns, which is a
+  // different question from the panel's aggregate totals.
+  'insight.title': '跨会话洞察',
+  'insight.description': '把全部会话摊开对比：谁最花钱、谁调用最多、哪些还活跃。',
+  'insight.entryHint': '单独一页列出全部会话的用量与费用，可排序、可搜索。',
+  'insight.open': '打开',
+  'insight.sortBy': '排序方式',
+  'insight.sortCost': '按费用',
+  'insight.sortTokens': '按用量',
+  'insight.sortCalls': '按调用次数',
+  'insight.sortRecent': '按最近',
+  'insight.searchPlaceholder': '搜索会话标题或 ID',
+  'insight.sessionsShown': '命中会话',
+  'insight.totalTokens': '合计 Token',
+  'insight.totalCalls': '合计调用',
+  'insight.distribution': '会话用量分布',
+  'insight.distributionHint': '按当前排序的前若干会话：进度条与曲线都随排序指标变化，长度顺序与排行一致。',
+  'insight.ranking': '会话排行',
+  'insight.tokens': '{count} Token',
+  'insight.calls': '{count} 次调用',
+  'insight.noMatch': '没有匹配的会话。',
+  'insight.truncated': '另有 {count} 个会话未列出。',
+  'insight.scopeNote': '以上合计只统计本次取到的 {count} 个会话，不是全部历史。',
+  'insight.loadFailed': '读取会话用量失败。',
 };
 
 /**
@@ -956,6 +988,36 @@ const EN_DICT = {
   'toolbox.columnEnabled': 'Enabled',
   'toolbox.statusConnected': 'Connected',
   'toolbox.statusUnknown': 'Unknown',
+
+  // Relative time.
+  'time.justNow': 'just now',
+  'time.minutes': '{count}m ago',
+  'time.hours': '{count}h ago',
+  'time.days': '{count}d ago',
+
+  // Cross-session insight page.
+  'insight.title': 'Cross-session insight',
+  'insight.description': 'Every session side by side: which spent the most, which worked the hardest, which are still active.',
+  'insight.entryHint': 'A page listing every session with its usage and cost, sortable and searchable.',
+  'insight.open': 'Open',
+  'insight.sortBy': 'Sort by',
+  'insight.sortCost': 'By cost',
+  'insight.sortTokens': 'By usage',
+  'insight.sortCalls': 'By calls',
+  'insight.sortRecent': 'By recency',
+  'insight.searchPlaceholder': 'Search a session title or ID',
+  'insight.sessionsShown': 'Sessions matched',
+  'insight.totalTokens': 'Total tokens',
+  'insight.totalCalls': 'Total calls',
+  'insight.distribution': 'Session weight distribution',
+  'insight.distributionHint': 'The top sessions under the current sort; the bars and the curve both track the metric being sorted on, so their order matches the ranking.',
+  'insight.ranking': 'Session ranking',
+  'insight.tokens': '{count} tokens',
+  'insight.calls': '{count} calls',
+  'insight.noMatch': 'No session matches that search.',
+  'insight.truncated': '{count} more session(s) not listed.',
+  'insight.scopeNote': 'These totals cover the {count} session(s) fetched, not the entire history.',
+  'insight.loadFailed': 'Could not read session usage.',
 };
 
 /** Dictionaries by locale id, exported so tests can compare key sets. */

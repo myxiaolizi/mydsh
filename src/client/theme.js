@@ -1153,6 +1153,139 @@ export const STYLES = `
   margin: 3px 4px;
 }
 
+/* ── cross-session insight page ───────────────────────────────────────────
+   Rendered in shell.overlay, so it floats above the columns. The backdrop dims
+   the frame and the page scrolls independently, which keeps a long ranking from
+   stretching the frame. */
+.${ROOT}-insight-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  background: color-mix(in srgb, var(--dsw-alias-bg-base) 62%, transparent);
+  backdrop-filter: blur(2px);
+}
+
+.${ROOT}-insight-page {
+  width: min(880px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mydsh-space-4);
+  padding: 22px 24px 26px;
+  border-radius: 14px;
+  border: 1px solid var(--mydsh-border);
+  background: var(--mydsh-surface-raised);
+  box-shadow: 0 18px 48px rgb(0 0 0 / 22%);
+}
+
+.${ROOT}-insight-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--mydsh-space-4);
+}
+
+.${ROOT}-insight-heading {
+  margin: 0;
+  font-size: var(--mydsh-font-lg);
+  font-weight: 600;
+  color: var(--mydsh-text);
+}
+
+.${ROOT}-insight-sub {
+  margin: 4px 0 0;
+  font-size: var(--mydsh-font-sm);
+  color: var(--mydsh-text-muted);
+  max-width: 62ch;
+}
+
+.${ROOT}-insight-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--mydsh-space-3);
+}
+
+.${ROOT}-insight-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mydsh-space-3);
+}
+
+.${ROOT}-insight-controls .${ROOT}-input {
+  flex: 1 1 200px;
+  min-width: 160px;
+}
+
+.${ROOT}-insight-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.${ROOT}-insight-row {
+  display: flex;
+  align-items: center;
+  gap: var(--mydsh-space-3);
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--mydsh-border);
+}
+
+.${ROOT}-insight-row:last-child {
+  border-bottom: none;
+}
+
+.${ROOT}-insight-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.${ROOT}-insight-title {
+  font-size: var(--mydsh-font-sm);
+  color: var(--mydsh-text);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.${ROOT}-insight-bar {
+  height: 4px;
+  margin: 6px 0 5px;
+  border-radius: 999px;
+  background: var(--mydsh-surface-sunken);
+  overflow: hidden;
+}
+
+.${ROOT}-insight-bar-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--mydsh-accent);
+  min-width: 2px;
+}
+
+.${ROOT}-insight-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mydsh-space-3);
+  font-size: var(--mydsh-font-xs);
+  color: var(--mydsh-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.${ROOT}-insight-cost {
+  flex: 0 0 auto;
+  font-size: var(--mydsh-font-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--mydsh-text);
+}
+
 /* Reduced motion: the plugin animates state changes, so honour the preference. */
 @media (prefers-reduced-motion: reduce) {
   .${ROOT} * {

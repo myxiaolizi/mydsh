@@ -161,7 +161,7 @@ export function BackupPanel() {
         status.data?.busy === true ? h('p', { className: 'mydsh-hint' }, t('backup.busyHint')) : null,
         result !== undefined ? h(RunResult, { result }) : null,
         status.data?.lastBackupAt > 0
-          ? h('p', { className: 'mydsh-hint' }, `${t('backup.lastBackup')} ${formatRelative(status.data.lastBackupAt)}`)
+          ? h('p', { className: 'mydsh-hint' }, `${t('backup.lastBackup')} ${formatRelative(status.data.lastBackupAt, Date.now(), t)}`)
           : h('p', { className: 'mydsh-hint' }, t('backup.noRunsYet')),
         selectedCount === 0 ? h('p', { className: 'mydsh-notice' }, t('backup.noticeNone')) : null,
         destinations.length === 0 ? h('p', { className: 'mydsh-notice' }, t('backup.noticeNoDestination')) : null,
@@ -327,7 +327,7 @@ export function BackupPanel() {
               h('tbody', null,
                 status.data.history.map((entry) =>
                   h('tr', { key: entry.id },
-                    h('td', { className: 'mydsh-hint' }, formatRelative(entry.startedAt)),
+                    h('td', { className: 'mydsh-hint' }, formatRelative(entry.startedAt, Date.now(), t)),
                     h('td', null, h(Badge, null, triggerLabel(t, entry.trigger))),
                     h('td', null,
                       h(Badge, {

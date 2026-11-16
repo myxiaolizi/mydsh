@@ -257,10 +257,12 @@ await check('bundle: pure helpers format numbers and money the way the UI expect
   const ui = await import('../src/client/format.js');
   assert.equal(ui.formatNumber(0), '0');
   assert.equal(ui.formatNumber(999), '999');
-  // The project rule: past 万, one decimal.
+  // The project rule: past 万, one decimal. Past 亿 the unit steps up, or a real total
+  // renders as `1520785.1万` — correct but unreadable.
   assert.equal(ui.formatNumber(10_000), '1.0万');
   assert.equal(ui.formatNumber(12_345), '1.2万');
   assert.equal(ui.formatNumber(156_789), '15.7万');
+  assert.equal(ui.formatNumber(1_520_785_101), '15.2亿');
 
   assert.equal(ui.formatMoney(0), '¥0');
   assert.equal(ui.formatMoney(0.005), '¥0.0050');
@@ -271,9 +273,19 @@ await check('bundle: pure helpers format numbers and money the way the UI expect
   assert.equal(ui.formatBytes(1024), '1.0 KiB');
   assert.equal(ui.formatBytes(1536), '1.5 KiB');
 
-  assert.equal(ui.formatRelative(Date.now()), 'just now');
-  assert.match(ui.formatRelative(Date.now() - 5 * 60_000), /^5m ago$/);
-  assert.match(ui.formatRelative(Date.now() - 3 * 3600_000), /^3h ago$/);
+  // Relative time takes the panel's `t`, so the units follow the active language. Called
+  // without it the result is language-neutral: no English can leak into a Chinese UI.
+  assert.equal(ui.formatRelative(Date.now()), '');
+  assert.match(ui.formatRelative(Date.now() - 5 * 60_000), /^5m$/);
+  assert.match(ui.formatRelative(Date.now() - 3 * 3600_000), /^3h$/);
+  const zhTime = (key, params = {}) => ({
+    'time.justNow': '刚刚',
+    'time.minutes': `${params.count} 分钟前`,
+    'time.hours': `${params.count} 小时前`,
+    'time.days': `${params.count} 天前`,
+  }[key] ?? '');
+  assert.equal(ui.formatRelative(Date.now(), Date.now(), zhTime), '刚刚');
+  assert.match(ui.formatRelative(Date.now() - 3 * 3600_000, Date.now(), zhTime), /^3 小时前$/);
 
   assert.equal(ui.formatDuration(0), '—');
   assert.equal(ui.formatDuration(420), '420ms');

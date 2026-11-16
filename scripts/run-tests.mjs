@@ -14,6 +14,8 @@ const here = dirname(fileURLToPath(import.meta.url));
 const SUITES = [
   { name: 'source gate', script: 'check-source.mjs' },
   { name: 'repo targets', script: 'test-repo.mjs' },
+  { name: 'format rules', script: 'test-format.mjs' },
+  { name: 'pricing', script: 'test-pricing.mjs' },
   { name: 'i18n', script: 'test-i18n.mjs' },
   { name: 'host units', script: 'test-host.mjs' },
   { name: 'usage index', script: 'test-usage.mjs' },

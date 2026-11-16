@@ -44,6 +44,8 @@ import { BackupPanel } from './panel-backup.js';
 import { RetryPanel } from './panel-retry.js';
 import { InterfacePanel } from './panel-interface.js';
 import { PromptPanel, RemotePanel, ToolboxPanel } from './panel-misc.js';
+import { InsightPage } from './panel-insight.js';
+import { insightOpen, useValue } from './store.js';
 
 const h = React.createElement;
 
@@ -55,6 +57,7 @@ const IDS = {
   account: 'mydsh-account-chip',
   entry: 'mydsh-entry',
   entryIcon: 'mydsh-entry-icon',
+  insight: 'mydsh-insight',
 };
 
 /** Which settings section panel renders for each tab. */
@@ -72,6 +75,28 @@ const PANELS = {
 /** The context every settings surface needs, so one provider serves them all. */
 function Providers({ ctx, children }) {
   return h(I18nProvider, { ctx }, h(SettingsProvider, null, children));
+}
+
+/**
+ * The insight page's seat in `shell.overlay`.
+ *
+ * It renders nothing while closed. Escape closes it, matching every other overlay in the
+ * shell, and the listener is only attached while open so a closed page costs no handlers.
+ */
+function InsightOverlay() {
+  const open = useValue(insightOpen);
+
+  React.useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (event) => {
+      if (event.key === 'Escape') insightOpen.set(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
+  if (!open) return null;
+  return h(InsightPage, { onClose: () => insightOpen.set(false) });
 }
 
 /**
@@ -361,6 +386,18 @@ export function apply(ctx) {
       id: IDS.account,
       order: 10,
     }, () => h(Providers, { ctx }, h(AccountSlot, { ctx }))),
+  );
+
+  // The cross-session insight page. `shell.overlay` is a list slot with
+  // `replaceRisk: none` that floats above every column, so the page can be added without
+  // occupying `main` (keyed by sidebar entry id, and where the conversation renders).
+  // Nothing is drawn while closed, so the closed state costs one empty component.
+  guard('shell.overlay', () =>
+    mount(ctx, 'shell.overlay', {
+      name: 'shell.overlay',
+      id: IDS.insight,
+      order: 40,
+    }, () => h(Providers, { ctx }, h(InsightOverlay, null))),
   );
 
   return () => {

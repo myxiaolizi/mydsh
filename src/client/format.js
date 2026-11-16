@@ -8,10 +8,16 @@
  * same way instead of each rounding slightly differently.
  */
 
-/** Format a count, compressing past 万 per the project's number rule. */
+/**
+ * Format a count, compressing past 万 per the project's number rule.
+ *
+ * The rule compresses once; a value past 亿 would otherwise render as `1520785.1万`,
+ * which is correct but unreadable. Those switch unit to 亿 so the magnitude stays legible.
+ */
 export function formatNumber(value, digits = 1) {
   const n = Number(value ?? 0);
   if (!Number.isFinite(n)) return '0';
+  if (Math.abs(n) >= 100_000_000) return `${(n / 100_000_000).toFixed(digits)}亿`;
   if (Math.abs(n) >= 10_000) return `${(n / 10_000).toFixed(digits)}万`;
   if (Math.abs(n) >= 1000) return n.toLocaleString('en-US');
   return String(Math.round(n * 10) / 10);
@@ -46,17 +52,30 @@ export function formatBytes(bytes) {
   return `${(n / 1024 ** index).toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
 }
 
-/** Format a relative time such as "3h ago". */
-export function formatRelative(time, now = Date.now()) {
+/**
+ * Format a relative time such as "3h ago".
+ *
+ * `translate` is the panel's `t`. Passing it in keeps this module React-free (the tests
+ * import it directly) while still letting the wording follow the active language: the
+ * unit suffixes and the "just now" case are user-visible text, so hard-coding them here
+ * would put English into a Chinese UI.
+ *
+ * Every caller passes `t`; when it is omitted the output is the bare, unit-only form
+ * (`3h`), which stays language-neutral.
+ */
+export function formatRelative(time, now = Date.now(), translate = undefined) {
   if (typeof time !== 'number' || time <= 0) return '—';
+  const say = typeof translate === 'function'
+    ? (key, count) => translate(key, { count })
+    : (key, count) => ({ 'time.justNow': '', 'time.minutes': `${count}m`, 'time.hours': `${count}h`, 'time.days': `${count}d` }[key] ?? '');
   const delta = Math.max(0, now - time);
   const minute = 60_000;
   const hour = 60 * minute;
   const day = 24 * hour;
-  if (delta < minute) return 'just now';
-  if (delta < hour) return `${Math.floor(delta / minute)}m ago`;
-  if (delta < day) return `${Math.floor(delta / hour)}h ago`;
-  if (delta < 30 * day) return `${Math.floor(delta / day)}d ago`;
+  if (delta < minute) return say('time.justNow');
+  if (delta < hour) return say('time.minutes', Math.floor(delta / minute));
+  if (delta < day) return say('time.hours', Math.floor(delta / hour));
+  if (delta < 30 * day) return say('time.days', Math.floor(delta / day));
   return new Date(time).toLocaleDateString();
 }
 

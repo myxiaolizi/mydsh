@@ -5,8 +5,10 @@
  * A user must be able to tell that turning a switch on removes something they can
  * currently see, and how to get it back.
  *
- * These switches mirror the same keys as the Display tab. Both surfaces read and
- * write `display.*`, so the two pages can never disagree about the current state.
+ * These switches are the only home for the appearance flags: `display` decides placement
+ * and `interface` decides looks. They used to be declared in both sections while only
+ * `display` was read, which made every control here a switch that changed a value nothing
+ * consumed.
  */
 import React from 'react';
 import { Card } from './ui.js';
@@ -26,20 +28,20 @@ const TOGGLES = [
 export function InterfacePanel() {
   const { settings, update, saving } = useSettings();
   const t = useT();
-  const display = settings?.display ?? {};
+  const look = settings?.interface ?? {};
 
-  /** One switch bound to a display key. */
+  /** One switch bound to an interface key. */
   const switchRow = (key, labelKey, hintKey, disabled = false) =>
     h(FieldRow, { key, label: t(labelKey), hint: t(hintKey), disabled },
       h('button', {
         type: 'button',
         className: 'mydsh-switch',
-        'data-on': display[key] === true ? 'true' : 'false',
+        'data-on': look[key] === true ? 'true' : 'false',
         role: 'switch',
-        'aria-checked': display[key] === true,
+        'aria-checked': look[key] === true,
         'aria-label': t(labelKey),
-        disabled: disabled || saving === 'display',
-        onClick: () => update('display', { [key]: display[key] !== true }),
+        disabled: disabled || saving === 'interface',
+        onClick: () => update('interface', { [key]: look[key] !== true }),
       }),
     );
 
@@ -63,10 +65,10 @@ export function InterfacePanel() {
         'avatarOnly',
         'display.avatarOnly',
         'display.avatarOnlyHint',
-        display.accountMenuInTitlebar !== true,
+        look.accountMenuInTitlebar !== true,
       ),
       h('p', { className: 'mydsh-hint' },
-        display.accountMenuInTitlebar !== true ? t('iface.titlebarOff') : t('iface.titlebarOn')),
+        look.accountMenuInTitlebar !== true ? t('iface.titlebarOff') : t('iface.titlebarOn')),
     ),
   );
 }

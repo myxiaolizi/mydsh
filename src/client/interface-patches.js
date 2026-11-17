@@ -71,7 +71,11 @@ export function applyInterfacePatches(settings) {
   const body = document.body;
   if (body === null) return;
   const display = settings?.display ?? {};
-  const on = settings?.display?.enabled === true;
+  const look = settings?.interface ?? {};
+  // The section switch that gates every patch is `interface.enabled`: it owns the appearance
+  // switches, and a patch that ignored its own section's master switch would apply while the
+  // user had the whole group turned off.
+  const on = settings?.interface?.enabled === true;
 
   const flag = (name, value) => {
     const attribute = `data-mydsh-${name}`;
@@ -82,8 +86,8 @@ export function applyInterfacePatches(settings) {
   // The brand mark and name are handled by their own slots, which return null when
   // hidden. No CSS flag is needed for them, and emitting an unused attribute would
   // suggest a mechanism that does not exist.
-  flag('hide-new-session', display.hideNewSessionButton);
-  flag('compact', display.compactSidebar);
+  flag('hide-new-session', look.hideNewSessionButton);
+  flag('compact', look.compactSidebar);
 }
 
 /**

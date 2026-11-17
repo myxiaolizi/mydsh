@@ -140,6 +140,8 @@ function SidebarUsageReadout({ wide }) {
   const { settings } = useSettings();
   const t = useT();
   const display = settings?.display ?? {};
+  // Appearance switches live in `interface`; `display` only decides placement.
+  const look = settings?.interface ?? {};
   if (display.enabled !== true) return null;
   // `usagePlacement` decides where the numbers appear. It was declared with four options and
   // read nowhere, so choosing a position changed nothing. `sidebar` is the default seat; the
@@ -313,10 +315,12 @@ function SettingsGate() {
 function BrandMarkSlot({ size }) {
   const { settings } = useSettings();
   const display = settings?.display ?? {};
+  // Appearance switches live in `interface`; `display` only decides placement.
+  const look = settings?.interface ?? {};
   const usable = typeof size === 'number' ? size : 24;
 
-  if (display.hideBrandMark === true) return null;
-  if (display.brandMark === true) return h(BrandMark, { size: usable });
+  if (look.hideBrandMark === true) return null;
+  if (look.brandMark === true) return h(BrandMark, { size: usable });
   // Occupying the slot at all would hide the shipped mark, so hand it back by
   // rendering nothing only when the user explicitly asked for that; otherwise the
   // shell's own fallback is what should appear.
@@ -326,10 +330,12 @@ function BrandMarkSlot({ size }) {
 function BrandNameSlot() {
   const { settings } = useSettings();
   const display = settings?.display ?? {};
+  // Appearance switches live in `interface`; `display` only decides placement.
+  const look = settings?.interface ?? {};
   const t = useT();
 
-  if (display.hideBrandName === true) return null;
-  if (display.brandName === true) return h(BrandName, { label: t('nav.title') });
+  if (look.hideBrandName === true) return null;
+  if (look.brandName === true) return h(BrandName, { label: t('nav.title') });
   return null;
 }
 
@@ -337,7 +343,7 @@ function BrandNameSlot() {
 function AccountSlot({ ctx }) {
   const { settings } = useSettings();
   if (settings?.interface?.enabled !== true) return null;
-  if (settings?.display?.accountMenuInTitlebar !== true) return null;
+  if (settings?.interface?.accountMenuInTitlebar !== true) return null;
   return h(AccountChip, { ctx });
 }
 
@@ -423,6 +429,8 @@ function SidebarFleetEntry({ wide }) {
   const { settings } = useSettings();
   const t = useT();
   const display = settings?.display ?? {};
+  // Appearance switches live in `interface`; `display` only decides placement.
+  const look = settings?.interface ?? {};
   if (display.fleetPlacement !== 'sidebar' || display.enabled === false) return null;
 
   const label = t('fleet.open');
@@ -458,6 +466,8 @@ function SidebarEntry({ ctx, wide }) {
   const { settings } = useSettings();
   const t = useT();
   const display = settings?.display ?? {};
+  // Appearance switches live in `interface`; `display` only decides placement.
+  const look = settings?.interface ?? {};
   const showBadge = display.entry === 'sidebar' && display.sidebarBadge === true;
   const today = useTodayTokens(showBadge);
   if (display.entry !== 'sidebar') return null;
@@ -477,6 +487,8 @@ function SidebarEntry({ ctx, wide }) {
 function TitlebarEntry({ ctx }) {
   const { settings } = useSettings();
   const display = settings?.display ?? {};
+  // Appearance switches live in `interface`; `display` only decides placement.
+  const look = settings?.interface ?? {};
   if (display.entry !== 'titlebar') return null;
   // Two independent switches meet here: `entry` decides whether the plugin's button sits in
   // the header, `usagePlacement` decides whether the figures ride along with it. Showing the

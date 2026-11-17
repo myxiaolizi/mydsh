@@ -130,9 +130,13 @@ export function SettingsPage({ panels }) {
   const t = useT();
   const { settings, error, clearError, reload } = useSettings();
 
-  // Only tabs whose module is on are offered, so the bar never shows a page that
-  // can only say "this is off".
-  const visible = TABS.filter((entry) => sectionEnabled(settings, entry.section));
+  // Tabs stay visible whether or not their module is on.
+  //
+  // Filtering them out meant a switched-off module had no page and no tab, so a user who
+  // wanted to use it could not even see that it existed — the feature was unreachable rather
+  // than merely off. Each panel already renders its own "not enabled, turn it on here" state,
+  // which is the useful thing to show.
+  const visible = TABS;
   const [tab, setTab] = React.useState(undefined);
 
   // The active tab must survive a module being switched off while its page is open.

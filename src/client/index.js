@@ -121,12 +121,39 @@ function PanelIcon({ size, active }) {
  * the tab bar inside it. It replaces the shell's conversation view only while selected,
  * because `main` is keyed and the conversation keeps its own key.
  */
+/**
+ * The page behind the left rail icon.
+ *
+ * This is the plugin's own surface in the central column, so it has to be a page rather than a
+ * settings form: it fills the column, keeps its own tab bar, and puts the dashboard first.
+ *
+ * It previously rendered `SettingsPage` — the exact component the settings modal uses — which
+ * meant clicking the rail icon showed a narrow settings page with the same tab bar as the
+ * modal, and the dashboard the plugin is supposed to open on was only reachable from inside
+ * it. The two surfaces now share the tab machinery but not the layout: this one is full-width
+ * and scrolls as a page, the modal keeps its own frame.
+ */
 function MyDshMainPanel({ ctx }) {
   return h(Providers, { ctx },
     h('div', { className: 'mydsh mydsh-main' },
-      h(SettingsGate, null),
+      h(MainPage, null),
     ),
   );
+}
+
+/** The main column's page shell: fills the column, owns the scroll. */
+function MainPage() {
+  const t = useT();
+  const { settings, loading, error } = useSettings();
+
+  if (loading && settings === undefined) {
+    return h('div', { className: 'mydsh-main-inner' }, h('p', { className: 'mydsh-hint' }, t('common.loading')));
+  }
+  if (settings === undefined) {
+    return h('div', { className: 'mydsh-main-inner' },
+      h('div', { className: 'mydsh-error' }, error ?? t('error.hostUnreachable')));
+  }
+  return h('div', { className: 'mydsh-main-inner' }, h(SettingsPage, { panels: PANELS }));
 }
 
 /**

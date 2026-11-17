@@ -280,5 +280,51 @@ check('settings: the settings page is reachable while modules are off', () => {
   assert.ok(settingsTab, 'the settings tab must exist');
   assert.match(settingsTab[0], /section: null/, 'and must not be hidden by a module switch');
 });
-console.log(`\nwiring: ${19 - failures}/19 passed`);
+check('layout: the rail icon opens a page, not the settings form', () => {
+  // The main panel used to render `SettingsPage` directly — the component the settings modal
+  // uses — so clicking the rail icon produced a narrow settings page, and the dashboard the
+  // plugin is supposed to open on was only reachable from inside it.
+  assert.match(client, /function MyDshMainPanel/, 'the main panel must exist');
+  const mainPanel = client.slice(client.indexOf('function MyDshMainPanel'));
+  const body = mainPanel.slice(0, mainPanel.indexOf('\n}\n'));
+  assert.match(body, /MainPage/, 'it must render a page shell, not the settings component');
+  assert.match(client, /function MainPage\(\)/, 'and that shell must exist');
+  assert.match(client, /mydsh-main-inner/, 'the shell must have a wrapper that owns the scroll');
+});
+
+check('layout: the main column fills itself and scrolls once', () => {
+  // A page that does not fill the column leaves the shell with two scrollbars, or a short
+  // card floating in empty space.
+  const marker = '.' + String.fromCharCode(36) + '{ROOT}-main {';
+  const rule = theme.slice(theme.indexOf(marker));
+  assert.ok(rule.length > 0, 'the main rule must exist');
+  const body = rule.slice(0, rule.indexOf('\n}'));
+  assert.match(body, /height: 100%/, 'the page must fill the column');
+  assert.match(body, /overflow: hidden/, 'the shell must not scroll; the inner wrapper does');
+
+  const innerMarker = '.' + String.fromCharCode(36) + '{ROOT}-main-inner {';
+  const inner = theme.slice(theme.indexOf(innerMarker));
+  assert.ok(inner.length > 0, 'the inner wrapper rule must exist');
+  const innerBody = inner.slice(0, inner.indexOf('\n}'));
+  assert.match(innerBody, /overflow-y: auto/, 'the inner wrapper owns the scroll');
+  assert.match(innerBody, /width: min\(/, 'and keeps a readable measure on a wide column');
+});
+
+check('layout: a switched-off module keeps its tab', () => {
+  // Filtering tabs by module state hid the page entirely, so a user who wanted the feature
+  // could not see that it existed — unreachable rather than merely off.
+  const page = settingsPage.slice(settingsPage.indexOf('export function SettingsPage'));
+  const head = page.slice(0, page.indexOf('const active'));
+  assert.match(head, /const visible = TABS;/, 'every tab must stay visible');
+  assert.doesNotMatch(head, /TABS\.filter/, 'no tab may be filtered out by module state');
+
+  // And each gated page must explain the off state rather than rendering blank.
+  for (const source of featurePanels) {
+    if (source.includes('disabledTitle')) {
+      assert.match(source, /settings\.whereHint/, 'a disabled page must point at the settings tab');
+    }
+  }
+});
+
+console.log(`\nwiring: ${22 - failures}/22 passed`);
 process.exit(failures === 0 ? 0 : 1);

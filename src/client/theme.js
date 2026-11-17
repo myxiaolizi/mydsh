@@ -1248,10 +1248,35 @@ export const STYLES = `
   flex-direction: column;
   gap: var(--mydsh-space-2);
 }
+/* The page behind the rail icon. It fills the central column and owns the scroll, so the
+   inner content can be taller than the viewport without the shell growing a second scrollbar. */
 .${ROOT}-main {
   height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Inside the main column the page shell already supplies the padding and the scroll, so the
+   settings page drops its own to avoid a doubled gutter. */
+.${ROOT}-main-inner > .${ROOT}-page {
+  padding: 0;
+  gap: var(--mydsh-space-3);
+}
+
+.${ROOT}-main-inner {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
-  padding: 20px 22px 28px;
+  overflow-x: hidden;
+  /* A page reads better with a comfortable measure than edge to edge across a wide column. */
+  width: min(1040px, 100%);
+  margin: 0 auto;
+  padding: 20px 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mydsh-space-4);
 }
 
 /* Token readout at the sidebar foot: figures only, no product name. */
